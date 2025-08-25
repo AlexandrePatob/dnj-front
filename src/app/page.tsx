@@ -1,103 +1,190 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { User, Phone, ArrowRight, Cross, Heart, Users } from "lucide-react";
+import { User as UserType } from "@/lib/types";
+import { Header } from "@/components";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Aplicar máscara de telefone
+  const formatPhone = (value: string) => {
+    // Remove tudo que não é dígito
+    const numbers = value.replace(/\D/g, "");
+
+    // Aplica a máscara (41) 9 9978-6268
+    if (numbers.length <= 2) {
+      return `(${numbers}`;
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(
+        3
+      )}`;
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(
+        3,
+        7
+      )}-${numbers.slice(7, 11)}`;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const formatted = formatPhone(value);
+    setPhone(formatted);
+
+    // Validação do telefone
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length < 10) {
+      setPhoneError("Telefone deve ter pelo menos 10 dígitos");
+    } else if (numbers.length > 11) {
+      setPhoneError("Telefone deve ter no máximo 11 dígitos");
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setName(value);
+
+    // Validação do nome
+    if (value.trim().length < 2) {
+      setNameError("Nome deve ter pelo menos 2 caracteres");
+    } else if (value.trim().split(" ").length < 2) {
+      setNameError("Digite seu nome completo");
+    } else {
+      setNameError("");
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validações finais
+    if (name.trim().length < 2) {
+      setNameError("Nome deve ter pelo menos 2 caracteres");
+      return;
+    }
+
+    if (name.trim().split(" ").length < 2) {
+      setNameError("Digite seu nome completo");
+      return;
+    }
+
+    const phoneNumbers = phone.replace(/\D/g, "");
+    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+      setPhoneError("Telefone inválido");
+      return;
+    }
+
+    if (name.trim() && phone.trim() && !nameError && !phoneError) {
+      // Salvar no localStorage
+      const userData: UserType = { name: name.trim(), phone: phone.trim() };
+      localStorage.setItem("userData", JSON.stringify(userData));
+      // Redirecionar para seleção de fila
+      router.push("/select-queue");
+    }
+  };
+
+  const isFormValid = () => {
+    return (
+      name.trim().length >= 2 &&
+      name.trim().split(" ").length >= 2 &&
+      phone.replace(/\D/g, "").length >= 10 &&
+      phone.replace(/\D/g, "").length <= 11 &&
+      !nameError &&
+      !phoneError
+    );
+  };
+
+  return (
+    <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <Header 
+        title="DNJ"
+        subtitle="Espaço Esperança"
+        showLogo={true}
+      />
+
+      {/* Formulário de Cadastro */}
+      <div className="max-w-md mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+            Crie seu cadastro
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Campo Nome */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome completo
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={handleNameChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    nameError ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Digite seu nome completo"
+                  autoComplete="name"
+                  required
+                />
+              </div>
+              {nameError && (
+                <p className="text-red-500 text-xs mt-1">{nameError}</p>
+              )}
+            </div>
+
+            {/* Campo Telefone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Telefone (WhatsApp)
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    phoneError ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="(41) 9 9999-9999"
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+              {phoneError && (
+                <p className="text-red-500 text-xs mt-1">{phoneError}</p>
+              )}
+            </div>
+
+            {/* Botão de Envio */}
+            <button
+              type="submit"
+              disabled={!isFormValid()}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+            >
+              <span>Continuar</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </form>
+
+          <p className="text-xs text-gray-500 text-center mt-4">
+            Seus dados serão usados apenas para gerenciar sua posição na fila
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }

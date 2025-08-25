@@ -1,0 +1,430 @@
+import { useState, useEffect } from "react";
+import { CalledPerson, QueueType } from "../lib/types";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  UserCheck,
+  UserX,
+  Heart,
+  Users,
+} from "lucide-react";
+
+interface CalledPeopleListProps {
+  calledPeople: CalledPerson[];
+  onConfirm: (id: string) => void;
+  onNoShow: (id: string) => void;
+  onRemove: (id: string) => void;
+  queueType?: QueueType; // Opcional para filtrar por tipo
+  title?: string; // Título personalizado
+}
+
+export function CalledPeopleList({
+  calledPeople,
+  onConfirm,
+  onNoShow,
+  onRemove,
+  queueType,
+  title,
+}: CalledPeopleListProps) {
+  const [timeLeft, setTimeLeft] = useState<Record<string, number>>({});
+
+  // Filtrar pessoas por tipo de fila e por tempo
+  const filteredCalledPeople = (queueType
+    ? calledPeople.filter((person) => person.queueType === queueType)
+    : calledPeople
+  ).filter((person) => {
+    // Sempre mostrar pessoas aguardando
+    if (person.status === 'waiting') return true;
+    
+    // Para confirmed e no-show, só mostrar se foi atualizado recentemente (1 minuto)
+    if (person.status === 'confirmed' || person.status === 'no-show') {
+      const now = Date.now();
+      const updatedAt = person.updatedAt || person.calledAt; // Usar updatedAt ou calledAt como fallback
+      const oneMinuteAgo = now - (60 * 1000); // 1 minuto em ms
+      
+      return updatedAt > oneMinuteAgo;
+    }
+    
+    return false;
+  });
+
+  // Filtrar pessoas por tipo específico para as tabs
+  const confissoesCalledPeople = calledPeople.filter((person) => 
+    person.queueType === "confissoes"
+  ).filter((person) => {
+    if (person.status === 'waiting') return true;
+    if (person.status === 'confirmed' || person.status === 'no-show') {
+      const now = Date.now();
+      const updatedAt = person.updatedAt || person.calledAt;
+      const oneMinuteAgo = now - (60 * 1000);
+      return updatedAt > oneMinuteAgo;
+    }
+    return false;
+  });
+
+  const direcaoEspiritualCalledPeople = calledPeople.filter((person) => 
+    person.queueType === "direcao-espiritual"
+  ).filter((person) => {
+    if (person.status === 'waiting') return true;
+    if (person.status === 'confirmed' || person.status === 'no-show') {
+      const now = Date.now();
+      const updatedAt = person.updatedAt || person.calledAt;
+      const oneMinuteAgo = now - (60 * 1000);
+      return updatedAt > oneMinuteAgo;
+    }
+    return false;
+  });
+
+  // Verificar se há pessoas que estão em ambas as filas (para mostrar alerta)
+  const checkDuplicatePersons = (people: CalledPerson[]) => {
+    const personMap = new Map<string, CalledPerson[]>();
+    
+    people.forEach(person => {
+      const key = `${person.name}_${person.phone}`;
+      if (!personMap.has(key)) {
+        personMap.set(key, []);
+      }
+      personMap.get(key)!.push(person);
+    });
+    
+    return personMap;
+  };
+
+  // Atualizar timer a cada segundo
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const newTimeLeft: Record<string, number> = {};
+
+      calledPeople.forEach((person) => {
+        if (person.status === "waiting") {
+          const remaining = Math.max(0, person.expiresAt - now);
+          newTimeLeft[person.id] = remaining;
+        }
+      });
+
+      setTimeLeft(newTimeLeft);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [calledPeople]);
+
+  const formatTime = (milliseconds: number) => {
+    const minutes = Math.floor(milliseconds / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const getStatusColor = (status: CalledPerson["status"]) => {
+    switch (status) {
+      case "waiting":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "confirmed":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "no-show":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status: CalledPerson["status"]) => {
+    switch (status) {
+      case "waiting":
+        return <Clock className="w-4 h-4" />;
+      case "confirmed":
+        return <UserCheck className="w-4 h-4" />;
+      case "no-show":
+        return <UserX className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusText = (status: CalledPerson["status"]) => {
+    switch (status) {
+      case "waiting":
+        return "Aguardando";
+      case "confirmed":
+        return "Confirmado";
+      case "no-show":
+        return "Não Compareceu";
+      default:
+        return "Desconhecido";
+    }
+  };
+
+  // Definir título e ícone baseado no tipo
+  const getQueueTitle = () => {
+    if (title) return title;
+    if (queueType === "confissoes") return "Confissões - Lista de Chamados";
+    if (queueType === "direcao-espiritual")
+      return "Direção Espiritual - Lista de Chamados";
+    return "Lista de Chamados";
+  };
+
+  const getQueueIcon = () => {
+    if (queueType === "confissoes")
+      return <Heart className="w-5 h-5 text-blue-600" />;
+    if (queueType === "direcao-espiritual")
+      return <Users className="w-5 h-5 text-green-600" />;
+    return null;
+  };
+
+  // Componente para renderizar uma pessoa chamada
+  const CalledPersonItem = ({ person }: { person: CalledPerson }) => {
+    // Verificar se esta pessoa está em ambas as filas
+    const personInBothQueues = calledPeople.filter(p => 
+      p.name === person.name && p.phone === person.phone && p.status === 'waiting'
+    ).length > 1;
+
+    return (
+      <div
+        key={person.id}
+        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+          person.status === "waiting"
+            ? "border-yellow-200 bg-yellow-50"
+            : person.status === "confirmed"
+            ? "border-green-200 bg-green-50"
+            : "border-red-200 bg-red-50"
+        } ${personInBothQueues ? 'ring-2 ring-orange-300' : ''}`}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg text-gray-800">
+              {person.name}
+            </h3>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>
+                {person.queueType === "confissoes"
+                  ? "Confissões"
+                  : "Direção Espiritual"}
+              </span>
+              <span className="text-xs text-gray-400">
+                • Chamado às {new Date(person.calledAt).toLocaleTimeString('pt-BR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </span>
+              {personInBothQueues && (
+                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-300">
+                  ⚠️ Em ambas
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Badge className={getStatusColor(person.status)}>
+              <div className="flex items-center gap-1">
+                {getStatusIcon(person.status)}
+                {getStatusText(person.status)}
+              </div>
+            </Badge>
+
+            {person.status === "waiting" &&
+              timeLeft[person.id] !== undefined && (
+                <Badge variant="outline" className="font-mono">
+                  {formatTime(timeLeft[person.id])}
+                </Badge>
+              )}
+          </div>
+        </div>
+
+        {person.status === "waiting" && (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => onConfirm(person.id)}
+              size="sm"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Sim (Compareceu)
+            </Button>
+            <Button
+              onClick={() => onNoShow(person.id)}
+              size="sm"
+              variant="outline"
+              className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Não (Não Compareceu)
+            </Button>
+          </div>
+        )}
+
+        {person.status === "confirmed" && (
+          <div className="text-center py-2">
+            <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
+              ✅ Confirmado! Sumindo em instantes...
+            </span>
+          </div>
+        )}
+
+        {person.status === "no-show" && (
+          <div className="text-center py-2">
+            <span className="text-sm font-medium text-red-600 bg-red-100 px-3 py-1 rounded-full">
+              ❌ Não compareceu! Sumindo em instantes...
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Se não há pessoas chamadas, mostrar mensagem vazia
+  if (calledPeople.length === 0) {
+    return (
+      <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
+            {getQueueIcon()}
+            {getQueueTitle()}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">
+            Ninguém chamado no momento
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Se há um tipo específico definido, mostrar apenas essa lista (para desktop)
+  if (queueType) {
+    if (filteredCalledPeople.length === 0) {
+      return (
+        <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
+              {getQueueIcon()}
+              {getQueueTitle()}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground py-8">
+              Ninguém chamado no momento
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
+            {getQueueIcon()}
+            {getQueueTitle()}
+            <Badge variant="secondary" className="ml-2">
+              {filteredCalledPeople.length}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+            {filteredCalledPeople.map((person) => (
+              <CalledPersonItem key={person.id} person={person} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Para mobile: mostrar tabs separando as duas filas
+  return (
+    <div className="md:hidden">
+      <Tabs defaultValue="confissoes" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
+          <TabsTrigger
+            value="confissoes"
+            className="flex items-center space-x-2 data-[state=active]:bg-christblue data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+          >
+            <Heart className="w-4 h-4" />
+            <span>Confissões</span>
+            <Badge 
+              variant="secondary" 
+              className="ml-1 data-[state=active]:bg-white data-[state=active]:text-christblue"
+            >
+              {confissoesCalledPeople.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger
+            value="direcao-espiritual"
+            className="flex items-center space-x-2 data-[state=active]:bg-christgreen data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+          >
+            <Users className="w-4 h-4" />
+            <span>Direção Espiritual</span>
+            <Badge 
+              variant="secondary" 
+              className="ml-1 data-[state=active]:bg-white data-[state=active]:text-white data-[state=active]:text-christgreen"
+            >
+              {direcaoEspiritualCalledPeople.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="confissoes" className="mt-6">
+          <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-christblue-dark flex items-center gap-2">
+                <Heart className="w-6 h-6 text-christblue" />
+                Confissões - Lista de Chamados
+                <Badge variant="secondary" className="ml-2">
+                  {confissoesCalledPeople.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {confissoesCalledPeople.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                  {confissoesCalledPeople.map((person) => (
+                    <CalledPersonItem key={person.id} person={person} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Ninguém chamado no momento
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="direcao-espiritual" className="mt-6">
+          <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-christgreen-dark flex items-center gap-2">
+                <Users className="w-6 h-6 text-christgreen" />
+                Direção Espiritual - Lista de Chamados
+                <Badge variant="secondary" className="ml-2">
+                  {direcaoEspiritualCalledPeople.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {direcaoEspiritualCalledPeople.length > 0 ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                  {direcaoEspiritualCalledPeople.map((person) => (
+                    <CalledPersonItem key={person.id} person={person} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  Ninguém chamado no momento
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
