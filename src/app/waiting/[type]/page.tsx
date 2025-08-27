@@ -158,10 +158,10 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#e5e9ff" }}>
-        <div className="text-center">
-          <LoadingSpinner size="lg" color="blue" className="mx-auto mb-4" />
-          <p className="text-gray-600">Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-center text-white">
+          <LoadingSpinner size="lg" color="white" className="mx-auto mb-4" />
+          <p className="text-white">Carregando...</p>
         </div>
       </div>
     );
@@ -175,7 +175,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de erro de validação
   if (queueStatus === "validation-error") {
     return (
-      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <div className="min-h-screen p-4 bg-black text-white">
         <Header queueType={queueType} />
 
         <StatusCard
@@ -203,7 +203,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de entrada na fila (quando ainda não entrou)
   if (queueStatus === "joining") {
     return (
-      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <div className="min-h-screen p-4 bg-black text-white">
         <Header
           title="DNJ - Fila"
           subtitle={
@@ -235,7 +235,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de erro na entrada da fila
   if (queueStatus === "error") {
     return (
-      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <div className="min-h-screen p-4 bg-black text-white">
         <Header queueType={queueType} />
 
         <StatusCard
@@ -269,7 +269,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   // Tela principal de espera (quando já entrou na fila)
   return (
-    <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+    <div className="min-h-screen p-4 bg-black text-white">
       <Header queueType={queueType} />
 
       <QueueStatusCard
@@ -316,7 +316,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
       {!isAddingToQueue && (
         <BackButton 
           href="/select-queue" 
-          text="Voltar à seleção" 
+            text="Voltar à seleção" 
         />
       )}
     </div>

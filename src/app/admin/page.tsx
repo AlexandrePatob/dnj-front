@@ -173,8 +173,7 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <main
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#e5e9ff" }}
+        className="min-h-screen flex items-center justify-center bg-black text-white"
       >
         <Card className="w-full max-w-md mx-4">
           <Header
@@ -240,11 +239,10 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen" style={{ background: "#e5e9ff" }}>
+    <main className="min-h-screen bg-black text-white">
       {/* Header fixo */}
       <div
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{ background: "#e5e9ff" }}
+        className="fixed top-0 left-0 right-0 z-50 bg-black text-white"
       >
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">

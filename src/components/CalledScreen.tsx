@@ -9,7 +9,7 @@ interface CalledScreenProps {
 
 export function CalledScreen({ currentUser }: CalledScreenProps) {
   return (
-    <div className="min-h-screen p-4 flex items-center justify-center" style={{ background: "#e5e9ff" }}>
+    <div className="min-h-screen p-4 flex items-center justify-center bg-black text-white">
       <div className="max-w-md mx-auto text-center">
         {/* Ícone de chamada */}
         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
@@ -37,7 +37,7 @@ export function CalledScreen({ currentUser }: CalledScreenProps) {
         <div className="mt-6">
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="inline-flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar ao início</span>

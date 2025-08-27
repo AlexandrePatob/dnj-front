@@ -55,13 +55,13 @@ export function StateScreen({
   };
 
   return (
-    <div className={`min-h-screen p-4 flex items-center justify-center ${className}`} style={{ background: "#e5e9ff" }}>
+    <div className={`min-h-screen p-4 flex items-center justify-center bg-black text-white ${className}`}>
       <div className="max-w-md mx-auto text-center">
         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
           {icon}
         </div>
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">{title}</h1>
-        <p className="text-gray-600 mb-6">{description}</p>
+        <h1 className="text-3xl font-bold text-white mb-4">{title}</h1>
+        <p className="text-white mb-6">{description}</p>
         
         {renderButton()}
 
@@ -69,7 +69,7 @@ export function StateScreen({
           <div className="mt-6">
             <Link
               href={backButtonHref}
-              className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="inline-flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{backButtonText}</span>

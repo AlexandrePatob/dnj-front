@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Phone, ArrowRight, Cross, Heart, Users } from "lucide-react";
+import { User, Phone, ArrowRight } from "lucide-react";
 import { User as UserType } from "@/lib/types";
 import { Header } from "@/components";
 
@@ -106,12 +106,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
-      <Header 
-        title="DNJ"
-        subtitle="Espaço Esperança"
-        showLogo={true}
-      />
+    <div className="min-h-screen bg-black text-white p-4">
+      <Header title="DNJ" subtitle="Espaço Esperança" showLogo={true} />
 
       {/* Formulário de Cadastro */}
       <div className="max-w-md mx-auto">
