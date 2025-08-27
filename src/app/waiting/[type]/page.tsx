@@ -23,7 +23,6 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   const [user, setUser] = useState<User | null>(null);
   const [showAlmostThere, setShowAlmostThere] = useState(false);
   const [showCalled, setShowCalled] = useState(false);
-  const [showThankYou, setShowThankYou] = useState(false);
 
   // Estados para controle de entrada na fila
   const [queueStatus, setQueueStatus] = useState<
@@ -105,6 +104,11 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
         // Primeiro validar se pode entrar na fila
         const validation = await validateUserCanJoinQueue(currentUser, queueType);
+
+        if(validation.calling) {
+          setShowCalled(true);
+          return;
+        }
         
         if (!validation.canJoin) {
           // Se o usuário já está na fila e pode recuperar o status
@@ -163,22 +167,9 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     );
   }
 
-  // Tela de agradecimento
-  if (showThankYou) {
-    return (
-      <StateScreen
-        icon={<CheckCircle className="w-10 h-10 text-green-600" />}
-        title="Obrigado!"
-        description="Que Deus abençoe você e sua família. Obrigado por participar do DNJ."
-        buttonText="Voltar ao início"
-        buttonHref="/"
-      />
-    );
-  }
-
-  // Tela de chamada
+  // Tela de chamada (unificada com agradecimento)
   if (showCalled) {
-    return <CalledScreen onFinishService={() => setShowThankYou(true)} />;
+    return <CalledScreen currentUser={user} />;
   }
 
   // Tela de erro de validação

@@ -29,109 +29,272 @@ export function useFirebaseQueue() {
   const [error, setError] = useState<string | null>(null);
 
   // Função para validar se o usuário pode entrar na fila
-  const validateUserCanJoinQueue = useCallback(async (user: User, queueType: QueueType): Promise<QueueValidation> => {
-    try {
-      // Verificar se já está em alguma fila (qualquer status)
-      const existingQuery = query(
-        collection(db, COLLECTIONS.QUEUE),
-        where("name", "==", user.name),
-        where("phone", "==", user.phone)
-      );
+  const validateUserCanJoinQueue = useCallback(
+    async (user: User, queueType: QueueType): Promise<QueueValidation> => {
+      try {
+        // Verificar se já está em alguma fila (qualquer status)
+        const existingQuery = query(
+          collection(db, COLLECTIONS.QUEUE),
+          where("name", "==", user.name),
+          where("phone", "==", user.phone)
+        );
 
-      const existingDocs = await getDocs(existingQuery);
-      
-      if (!existingDocs.empty) {
-        const existingQueues: QueueType[] = [];
-        let hasCalledStatus = false;
-        let hasWaitingStatus = false;
+        const existingDocs = await getDocs(existingQuery);
 
-        existingDocs.forEach(doc => {
-          const data = doc.data();
-          if (data.queueType && !existingQueues.includes(data.queueType)) {
-            existingQueues.push(data.queueType);
-          }
-          
-          // Verificar status
-          if (data.status === "called") {
-            hasCalledStatus = true;
-          } else if (data.status === "waiting") {
-            hasWaitingStatus = true;
-          }
-        });
+        if (!existingDocs.empty) {
+          const existingQueues: QueueType[] = [];
+          let hasCalledStatus = false;
+          let hasWaitingStatus = false;
 
-        // Se já está na fila específica
-        if (existingQueues.includes(queueType)) {
-          // Verificar se está na mesma fila com status "waiting" (pode ter atualizado a página)
-          const sameQueueDoc = existingDocs.docs.find(doc => {
+          existingDocs.forEach((doc) => {
             const data = doc.data();
-            return data.queueType === queueType;
+            if (data.queueType && !existingQueues.includes(data.queueType)) {
+              existingQueues.push(data.queueType);
+            }
+
+            // Verificar status
+            if (data.status === "called") {
+              hasCalledStatus = true;
+            } else if (data.status === "waiting") {
+              hasWaitingStatus = true;
+            }
           });
 
-          if (sameQueueDoc) {
-            const sameQueueData = sameQueueDoc.data();
-            
-            // Se está na mesma fila com status "waiting", permitir recuperar o status
-            if (sameQueueData.status === "waiting") {
-              return {
-                canJoin: false,
-                reason: "Você já está nesta fila! Aguarde sua vez.",
-                existingQueues,
-                isAlreadyWaiting: true,
-                shouldRecover: true,
-                currentPosition: sameQueueData.position || 1,
-                currentQueueType: queueType
-              };
+          // Se já está na fila específica
+          if (existingQueues.includes(queueType)) {
+            // Verificar se está na mesma fila com status "waiting" (pode ter atualizado a página)
+            const sameQueueDoc = existingDocs.docs.find((doc) => {
+              const data = doc.data();
+              return data.queueType === queueType;
+            });
+
+            if (sameQueueDoc) {
+              const sameQueueData = sameQueueDoc.data();
+
+              // Se está na mesma fila com status "waiting", permitir recuperar o status
+              if (sameQueueData.status === "waiting") {
+                return {
+                  canJoin: false,
+                  reason: "Você já está nesta fila! Aguarde sua vez.",
+                  existingQueues,
+                  isAlreadyWaiting: true,
+                  shouldRecover: true,
+                  currentPosition: sameQueueData.position || 1,
+                  currentQueueType: queueType,
+                };
+              }
+
+              // Se está na mesma fila com status "called", SEMPRE verificar na calledPeople
+              if (sameQueueData.status === "called") {
+                // SEMPRE verificar na coleção calledPeople para esta fila
+                const calledPeopleQuery = query(
+                  collection(db, COLLECTIONS.CALLED_PEOPLE),
+                  where("name", "==", user.name),
+                  where("phone", "==", user.phone),
+                  where("queueType", "==", queueType)
+                );
+
+                const calledPeopleDocs = await getDocs(calledPeopleQuery);
+
+                if (!calledPeopleDocs.empty) {
+                  // Verificar se tem status específico ou se foi chamado sem status
+                  const calledPeopleData = calledPeopleDocs.docs[0].data();
+                  const calledStatus = calledPeopleData.status || "sem-status";
+                  const calledAt = calledPeopleData.calledAt;
+
+                  // Se foi chamado recentemente (menos de 15 minutos), não permitir
+                  if (calledAt && calledStatus !== "sem-status") {
+                    const calledTime = calledAt.toDate();
+                    const currentTime = new Date();
+                    const timeDifference =
+                      currentTime.getTime() - calledTime.getTime();
+                    const fifteenMinutesInMs = 15 * 60 * 1000;
+
+                    if (timeDifference < fifteenMinutesInMs) {
+                      return {
+                        canJoin: false,
+                        reason:
+                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                        existingQueues,
+                        isAlreadyCalled: true,
+                      };
+                    } else {
+                      // Já passou 15 minutos, pode entrar novamente
+                      return {
+                        canJoin: false,
+                        calling: true,
+                        existingQueues,
+                      };
+                    }
+                  } else {
+                    // Se não tem timestamp, verificar pelo status
+                    if (
+                      calledStatus === "no-show" ||
+                      calledStatus === "sem-status"
+                    ) {
+                      return {
+                        canJoin: false,
+                        calling: true,
+                        existingQueues,
+                      };
+                    } else {
+                      return {
+                        canJoin: false,
+                        reason:
+                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                        existingQueues,
+                        isAlreadyCalled: true,
+                      };
+                    }
+                  }
+                }
+              }
             }
+          }
+
+                    // Se tem status "called" em qualquer fila, verificar se a fila específica está bloqueada
+          if (hasCalledStatus) {
+            // Verificar se a fila específica que o usuário quer entrar está bloqueada
+            const specificQueueDoc = existingDocs.docs.find((doc) => {
+              const data = doc.data();
+              return data.queueType === queueType && data.status === "called";
+            });
+
+            if (specificQueueDoc) {
+              const specificQueueData = specificQueueDoc.data();
+              
+              if (specificQueueData.calledAt) {
+                const calledTime = specificQueueData.calledAt.toDate();
+                const currentTime = new Date();
+                const timeDifference =
+                  currentTime.getTime() - calledTime.getTime();
+                const fifteenMinutesInMs = 15 * 60 * 1000;
+
+                if (timeDifference < fifteenMinutesInMs) {
+                  return {
+                    canJoin: false,
+                    reason:
+                      "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                    existingQueues,
+                    isAlreadyCalled: true,
+                  };
+                }
+              } else {
+                // Verificar na calledPeople para esta fila específica
+                const calledPeopleQuery = query(
+                  collection(db, COLLECTIONS.CALLED_PEOPLE),
+                  where("name", "==", user.name),
+                  where("phone", "==", user.phone),
+                  where("queueType", "==", queueType)
+                );
+                
+                const calledPeopleDocs = await getDocs(calledPeopleQuery);
+                
+                if (!calledPeopleDocs.empty) {
+                  const calledPeopleData = calledPeopleDocs.docs[0].data();
+                  const calledStatus = calledPeopleData.status || "sem-status";
+                  const calledAt = calledPeopleData.calledAt;
+                  
+                  if (calledAt && calledStatus !== "sem-status") {
+                    const calledTime = calledAt.toDate();
+                    const currentTime = new Date();
+                    const timeDifference =
+                      currentTime.getTime() - calledTime.getTime();
+                    const fifteenMinutesInMs = 15 * 60 * 1000;
+                    
+                    if (timeDifference < fifteenMinutesInMs) {
+                      return {
+                        canJoin: false,
+                        reason:
+                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                        existingQueues,
+                        isAlreadyCalled: true,
+                      };
+                    }
+                  } else if (calledStatus !== "no-show" && calledStatus !== "sem-status") {
+                    return {
+                      canJoin: false,
+                      reason:
+                        "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                      existingQueues,
+                      isAlreadyCalled: true,
+                    };
+                  }
+                }
+              }
+            }
+          }
+
+          // Se está em outra fila com status "waiting", verificar se pode entrar em outra fila
+          if (hasWaitingStatus) {
+            // Verificar se o usuário já está em uma fila com status "waiting" sem registro na calledPeople
+            const waitingQueueDoc = existingDocs.docs.find((doc) => {
+              const data = doc.data();
+              return data.status === "waiting";
+            });
             
-            // Se está na mesma fila com status "called", não permitir
-            if (sameQueueData.status === "called") {
+            if (waitingQueueDoc) {
+              const waitingQueueData = waitingQueueDoc.data();
+              
+              // Verificar se tem registro na calledPeople para esta fila
+              const calledPeopleQuery = query(
+                collection(db, COLLECTIONS.CALLED_PEOPLE),
+                where("name", "==", user.name),
+                where("phone", "==", user.phone),
+                where("queueType", "==", waitingQueueData.queueType)
+              );
+              
+              const calledPeopleDocs = await getDocs(calledPeopleQuery);
+              
+              if (calledPeopleDocs.empty) {
+                return {
+                  canJoin: false,
+                  reason: "Você já está aguardando em uma fila. Não pode entrar em outra fila ao mesmo tempo.",
+                  existingQueues,
+                  isAlreadyWaiting: true,
+                  currentPosition: waitingQueueData.position || 1,
+                  currentQueueType: waitingQueueData.queueType,
+                };
+              } else {
+                return {
+                  canJoin: true,
+                  existingQueues,
+                  message: "Você está em outra fila, mas pode entrar nesta também.",
+                };
+              }
+            } else {
               return {
-                canJoin: false,
-                reason: "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                canJoin: true,
                 existingQueues,
-                isAlreadyCalled: true
+                message: "Você está em outra fila, mas pode entrar nesta também.",
               };
             }
           }
         }
 
-        // Se tem status "called" em qualquer fila, não permitir entrar
-        if (hasCalledStatus) {
-          return {
-            canJoin: false,
-            reason: "Você já foi chamado em uma fila! Não pode entrar novamente.",
-            existingQueues,
-            isAlreadyCalled: true
-          };
-        }
-
-        // Se está em outra fila com status "waiting", pode entrar nesta também
-        if (hasWaitingStatus) {
-          return {
-            canJoin: true,
-            existingQueues,
-            message: "Você está em outra fila, mas pode entrar nesta também."
-          };
-        }
+        return { canJoin: true };
+      } catch (error) {
+        console.error("❌ Erro ao validar usuário:", error);
+        return { canJoin: false, reason: "Erro ao validar usuário" };
       }
-
-      return { canJoin: true };
-    } catch (error) {
-      console.error("Erro ao validar usuário:", error);
-      return { canJoin: false, reason: "Erro ao validar usuário" };
-    }
-  }, []);
+    },
+    []
+  );
 
   // Função para executar quando chegar EXATAMENTE na posição configurada
   const executeAlmostThereFunction = useCallback(async (person: QueueItem) => {
     try {
-      console.log(`📱 EXECUTANDO "QUASE LÁ" para ${person.name} na posição ${person.position}`);
-      
+      console.log(
+        `📱 EXECUTANDO "QUASE LÁ" para ${person.name} na posição ${person.position}`
+      );
+
       // Buscar configuração atual
       const configResponse = await fetch("/api/config");
       const config = await configResponse.json();
 
-      console.log(`⚙️ WhatsApp habilitado: ${config.whatsAppEnabled}, Posição configurada: ${config.almostTherePosition}`);
+      console.log(
+        `⚙️ WhatsApp habilitado: ${config.whatsAppEnabled}, Posição configurada: ${config.almostTherePosition}`
+      );
 
       if (!config.whatsAppEnabled) {
         console.log(`❌ WhatsApp desabilitado - não enviando`);
@@ -223,7 +386,6 @@ export function useFirebaseQueue() {
       });
 
       if (response.ok) {
-        console.log(`✅ WhatsApp de boas-vindas enviado para ${person.name} na posição ${person.position}`);
       } else {
         console.error("❌ Erro ao enviar WhatsApp de boas-vindas");
       }
@@ -245,11 +407,10 @@ export function useFirebaseQueue() {
           position === config.almostTherePosition &&
           personData.position !== position // Só se mudou para esta posição
         ) {
-          console.log(`🚨 ENVIANDO "QUASE LÁ": ${personData.name} chegou na posição ${position} (configurado: ${config.almostTherePosition})`);
           executeAlmostThereFunction({
             id: doc.id,
             ...personData,
-            position: position // Usar a nova posição
+            position: position, // Usar a nova posição
           } as QueueItem);
         }
 
@@ -264,7 +425,10 @@ export function useFirebaseQueue() {
 
   // Atualizar posição na fila - DECLARADA ANTES DE SER USADA
   const updatePosition = useCallback(
-    async (personId: string, queueType: QueueType): Promise<number | undefined> => {
+    async (
+      personId: string,
+      queueType: QueueType
+    ): Promise<number | undefined> => {
       try {
         const batch = writeBatch(db);
 
@@ -311,52 +475,57 @@ export function useFirebaseQueue() {
   );
 
   // Adicionar pessoa à fila - AGORA PODE USAR updatePosition
-  const addToQueue = useCallback(async (user: User, queueType: QueueType) => {
-    try {
-      setIsLoading(true);
+  const addToQueue = useCallback(
+    async (user: User, queueType: QueueType) => {
+      try {
+        setIsLoading(true);
 
-      // Validar se pode entrar na fila
-      const validation = await validateUserCanJoinQueue(user, queueType);
-      
-      if (!validation.canJoin) {
-        throw new Error(validation.reason || "Não foi possível entrar na fila");
-      }
+        // Validar se pode entrar na fila
+        const validation = await validateUserCanJoinQueue(user, queueType);
 
-      // Adicionar à fila
-      const docRef = await addDoc(collection(db, COLLECTIONS.QUEUE), {
-        name: user.name,
-        phone: user.phone,
-        queueType: queueType,
-        createdAt: serverTimestamp(),
-        status: "waiting",
-        position: 1, // Posição inicial (não pode ser 0)
-      });
+        if (!validation.canJoin) {
+          throw new Error(
+            validation.reason || "Não foi possível entrar na fila"
+          );
+        }
 
-      // Atualizar posição baseada na ordem de chegada
-      const newPosition = await updatePosition(docRef.id, queueType);
-
-      // Enviar mensagem de boas-vindas
-      if (newPosition !== undefined) {
-        await sendWelcomeMessage({
-          id: docRef.id,
+        // Adicionar à fila
+        const docRef = await addDoc(collection(db, COLLECTIONS.QUEUE), {
           name: user.name,
           phone: user.phone,
           queueType: queueType,
-          position: newPosition,
-          createdAt: new Date().toISOString(),
-        } as QueueItem);
-      }
+          createdAt: serverTimestamp(),
+          status: "waiting",
+          position: 1, // Posição inicial (não pode ser 0)
+        });
 
-      return docRef.id;
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Erro ao entrar na fila"
-      );
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [validateUserCanJoinQueue, updatePosition, sendWelcomeMessage]);
+        // Atualizar posição baseada na ordem de chegada
+        const newPosition = await updatePosition(docRef.id, queueType);
+
+        // Enviar mensagem de boas-vindas
+        if (newPosition !== undefined) {
+          await sendWelcomeMessage({
+            id: docRef.id,
+            name: user.name,
+            phone: user.phone,
+            queueType: queueType,
+            position: newPosition,
+            createdAt: new Date().toISOString(),
+          } as QueueItem);
+        }
+
+        return docRef.id;
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Erro ao entrar na fila"
+        );
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [validateUserCanJoinQueue, updatePosition, sendWelcomeMessage]
+  );
 
   // Remover pessoa da fila
   const removeFromQueue = useCallback(
@@ -408,7 +577,6 @@ export function useFirebaseQueue() {
               });
 
               if (response.ok) {
-                console.log(`WhatsApp de vez enviado para ${personData.name} (chamado pelo admin)`);
               } else {
                 console.error("Erro ao enviar WhatsApp de vez");
               }

@@ -50,5 +50,6 @@ export interface QueueValidation {
   currentPosition?: number;
   currentQueueType?: QueueType;
   shouldRecover?: boolean;
+  calling?: boolean;
 }
 
