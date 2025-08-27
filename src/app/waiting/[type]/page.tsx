@@ -27,11 +27,12 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   // Estados para controle de entrada na fila
   const [queueStatus, setQueueStatus] = useState<
-    "joining" | "joined" | "error"
+    "joining" | "joined" | "error" | "validation-error"
   >("joining");
   const [errorMessage, setErrorMessage] = useState("");
   const [hasJoinedQueue, setHasJoinedQueue] = useState(false);
   const [isAddingToQueue, setIsAddingToQueue] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState<number | null>(null);
 
   const router = useRouter();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +48,8 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     error
   } = useWaitingStatus(user, queueType);
 
-
+  // Usar o hook da fila para validação
+  const { validateUserCanJoinQueue } = useFirebaseQueue();
 
   // Função para buscar usuário do localStorage em tempo real
   const getUser = (): User | null => {
@@ -100,6 +102,26 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         hasAttemptedToJoinRef.current = true; // Marca que já tentou
         setIsAddingToQueue(true); // Ativar loading
         setQueueStatus("joining");
+
+        // Primeiro validar se pode entrar na fila
+        const validation = await validateUserCanJoinQueue(currentUser, queueType);
+        
+        if (!validation.canJoin) {
+          // Se o usuário já está na fila e pode recuperar o status
+          if (validation.shouldRecover && validation.currentPosition) {
+            setCurrentPosition(validation.currentPosition);
+            setQueueStatus("joined");
+            setHasJoinedQueue(true);
+            return;
+          }
+          
+          // Se não pode recuperar, mostrar erro
+          setQueueStatus("validation-error");
+          setErrorMessage(validation.reason || "Não foi possível entrar na fila");
+          return;
+        }
+
+        // Se pode entrar, adicionar à fila
         await addToQueue(currentUser, queueType);
         setQueueStatus("joined");
         setHasJoinedQueue(true);
@@ -157,6 +179,34 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de chamada
   if (showCalled) {
     return <CalledScreen onFinishService={() => setShowThankYou(true)} />;
+  }
+
+  // Tela de erro de validação
+  if (queueStatus === "validation-error") {
+    return (
+      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+        <Header queueType={queueType} />
+
+        <StatusCard
+          icon={<AlertCircle className="w-8 h-8" />}
+          title="Não foi possível entrar na fila"
+          description={errorMessage}
+          status="error"
+          showSpinner={false}
+        >
+          <p className="text-xs text-red-500 mt-4">
+            Você já está em uma fila ou não pode entrar nesta fila no momento.
+          </p>
+          
+          {/* Botão para voltar à seleção */}
+          <BackButton 
+            href="/select-queue" 
+            text="Voltar à seleção" 
+            className="mt-4"
+          />
+        </StatusCard>
+      </div>
+    );
   }
 
   // Tela de entrada na fila (quando ainda não entrou)

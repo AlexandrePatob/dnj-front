@@ -14,7 +14,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { QueueItem, QueueType, User } from "./types";
+import { QueueItem, QueueType, User, QueueValidation } from "./types";
 
 // Configurações
 const COLLECTIONS = {
@@ -27,6 +27,100 @@ export function useFirebaseQueue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Função para validar se o usuário pode entrar na fila
+  const validateUserCanJoinQueue = useCallback(async (user: User, queueType: QueueType): Promise<QueueValidation> => {
+    try {
+      // Verificar se já está em alguma fila (qualquer status)
+      const existingQuery = query(
+        collection(db, COLLECTIONS.QUEUE),
+        where("name", "==", user.name),
+        where("phone", "==", user.phone)
+      );
+
+      const existingDocs = await getDocs(existingQuery);
+      
+      if (!existingDocs.empty) {
+        const existingQueues: QueueType[] = [];
+        let hasCalledStatus = false;
+        let hasWaitingStatus = false;
+
+        existingDocs.forEach(doc => {
+          const data = doc.data();
+          if (data.queueType && !existingQueues.includes(data.queueType)) {
+            existingQueues.push(data.queueType);
+          }
+          
+          // Verificar status
+          if (data.status === "called") {
+            hasCalledStatus = true;
+          } else if (data.status === "waiting") {
+            hasWaitingStatus = true;
+          }
+        });
+
+        // Se já está na fila específica
+        if (existingQueues.includes(queueType)) {
+          // Verificar se está na mesma fila com status "waiting" (pode ter atualizado a página)
+          const sameQueueDoc = existingDocs.docs.find(doc => {
+            const data = doc.data();
+            return data.queueType === queueType;
+          });
+
+          if (sameQueueDoc) {
+            const sameQueueData = sameQueueDoc.data();
+            
+            // Se está na mesma fila com status "waiting", permitir recuperar o status
+            if (sameQueueData.status === "waiting") {
+              return {
+                canJoin: false,
+                reason: "Você já está nesta fila! Aguarde sua vez.",
+                existingQueues,
+                isAlreadyWaiting: true,
+                shouldRecover: true,
+                currentPosition: sameQueueData.position || 1,
+                currentQueueType: queueType
+              };
+            }
+            
+            // Se está na mesma fila com status "called", não permitir
+            if (sameQueueData.status === "called") {
+              return {
+                canJoin: false,
+                reason: "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                existingQueues,
+                isAlreadyCalled: true
+              };
+            }
+          }
+        }
+
+        // Se tem status "called" em qualquer fila, não permitir entrar
+        if (hasCalledStatus) {
+          return {
+            canJoin: false,
+            reason: "Você já foi chamado em uma fila! Não pode entrar novamente.",
+            existingQueues,
+            isAlreadyCalled: true
+          };
+        }
+
+        // Se está em outra fila com status "waiting", pode entrar nesta também
+        if (hasWaitingStatus) {
+          return {
+            canJoin: true,
+            existingQueues,
+            message: "Você está em outra fila, mas pode entrar nesta também."
+          };
+        }
+      }
+
+      return { canJoin: true };
+    } catch (error) {
+      console.error("Erro ao validar usuário:", error);
+      return { canJoin: false, reason: "Erro ao validar usuário" };
+    }
+  }, []);
 
   // Função para executar quando chegar EXATAMENTE na posição configurada
   const executeAlmostThereFunction = useCallback(async (person: QueueItem) => {
@@ -104,46 +198,37 @@ export function useFirebaseQueue() {
     }
   }, []);
 
-  // Adicionar pessoa à fila
-  const addToQueue = useCallback(async (user: User, queueType: QueueType) => {
+  // Função para enviar mensagem de boas-vindas
+  const sendWelcomeMessage = useCallback(async (person: QueueItem) => {
     try {
-      setIsLoading(true);
+      // Buscar configuração atual
+      const configResponse = await fetch("/api/config");
+      const config = await configResponse.json();
 
-      // Verificar se já está na fila
-      const existingQuery = query(
-        collection(db, COLLECTIONS.QUEUE),
-        where("name", "==", user.name),
-        where("phone", "==", user.phone),
-        where("queueType", "==", queueType),
-        where("status", "==", "waiting")
-      );
+      if (!config.whatsAppEnabled) return;
 
-      const existingDocs = await getDocs(existingQuery);
-      if (!existingDocs.empty) {
-        throw new Error("Você já está nesta fila! Aguarde sua vez.");
-      }
-
-      // Adicionar à fila
-      const docRef = await addDoc(collection(db, COLLECTIONS.QUEUE), {
-        name: user.name,
-        phone: user.phone,
-        queueType: queueType,
-        createdAt: serverTimestamp(),
-        status: "waiting",
-        position: 1, // Posição inicial (não pode ser 0)
+      // Chamar API do Next.js para enviar WhatsApp
+      const response = await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: person.name,
+          phone: person.phone,
+          queueType: person.queueType,
+          type: "welcome",
+          position: person.position,
+        }),
       });
 
-      // Atualizar posição baseada na ordem de chegada
-      await updatePosition(docRef.id, queueType);
-
-      return docRef.id;
+      if (response.ok) {
+        console.log(`✅ WhatsApp de boas-vindas enviado para ${person.name} na posição ${person.position}`);
+      } else {
+        console.error("❌ Erro ao enviar WhatsApp de boas-vindas");
+      }
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Erro ao entrar na fila"
-      );
-      throw error;
-    } finally {
-      setIsLoading(false);
+      console.error("❌ Erro ao enviar mensagem de boas-vindas:", error);
     }
   }, []);
 
@@ -177,9 +262,9 @@ export function useFirebaseQueue() {
     [executeAlmostThereFunction] // Remover executeTurnFunction das dependências
   );
 
-  // Atualizar posição na fila
+  // Atualizar posição na fila - DECLARADA ANTES DE SER USADA
   const updatePosition = useCallback(
-    async (personId: string, queueType: QueueType) => {
+    async (personId: string, queueType: QueueType): Promise<number | undefined> => {
       try {
         const batch = writeBatch(db);
 
@@ -193,6 +278,7 @@ export function useFirebaseQueue() {
 
         const querySnapshot = await getDocs(queueQuery);
         let position = 1;
+        let newPosition: number | undefined;
 
         for (const doc of querySnapshot.docs) {
           const personData = doc.data();
@@ -206,16 +292,71 @@ export function useFirebaseQueue() {
             await checkAndExecuteNotifications(doc, personData, position);
           }
 
+          // Guardar a posição da pessoa que estamos atualizando
+          if (doc.id === personId) {
+            newPosition = position;
+          }
+
           position++;
         }
 
         await batch.commit();
+        return newPosition;
       } catch (error) {
         console.error("Erro ao atualizar posições:", error);
+        return undefined;
       }
     },
     [checkAndExecuteNotifications]
   );
+
+  // Adicionar pessoa à fila - AGORA PODE USAR updatePosition
+  const addToQueue = useCallback(async (user: User, queueType: QueueType) => {
+    try {
+      setIsLoading(true);
+
+      // Validar se pode entrar na fila
+      const validation = await validateUserCanJoinQueue(user, queueType);
+      
+      if (!validation.canJoin) {
+        throw new Error(validation.reason || "Não foi possível entrar na fila");
+      }
+
+      // Adicionar à fila
+      const docRef = await addDoc(collection(db, COLLECTIONS.QUEUE), {
+        name: user.name,
+        phone: user.phone,
+        queueType: queueType,
+        createdAt: serverTimestamp(),
+        status: "waiting",
+        position: 1, // Posição inicial (não pode ser 0)
+      });
+
+      // Atualizar posição baseada na ordem de chegada
+      const newPosition = await updatePosition(docRef.id, queueType);
+
+      // Enviar mensagem de boas-vindas
+      if (newPosition !== undefined) {
+        await sendWelcomeMessage({
+          id: docRef.id,
+          name: user.name,
+          phone: user.phone,
+          queueType: queueType,
+          position: newPosition,
+          createdAt: new Date().toISOString(),
+        } as QueueItem);
+      }
+
+      return docRef.id;
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Erro ao entrar na fila"
+      );
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [validateUserCanJoinQueue, updatePosition, sendWelcomeMessage]);
 
   // Remover pessoa da fila
   const removeFromQueue = useCallback(
@@ -346,5 +487,6 @@ export function useFirebaseQueue() {
     removeFromQueue,
     callNext,
     updatePosition,
+    validateUserCanJoinQueue,
   };
 }
