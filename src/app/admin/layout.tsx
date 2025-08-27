@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DNJ - Fila de Esperança",
-  description: "Sistema de filas para o DNJ - Dia Nacional da Juventude",
+  title: "DNJ - Fila de Esperança - Administração",
+  description: "Administração do sistema de filas para o DNJ - Dia Nacional da Juventude",
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',

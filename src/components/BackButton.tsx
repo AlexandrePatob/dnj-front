@@ -12,7 +12,7 @@ export function BackButton({ href, text, className = "" }: BackButtonProps) {
     <div className={`max-w-md mx-auto ${className}`}>
       <Link
         href={href}
-        className="flex items-center justify-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+        className="flex items-center justify-center space-x-2 text-white hover:text-gray-300 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span>{text}</span>

@@ -20,6 +20,9 @@ import {
   Lock,
   Mail,
   Trash2,
+  Settings,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { QueueItem, QueueType } from "../../lib/types";
 import { useFirebaseQueue } from "../../lib/useFirebaseQueue";
@@ -38,6 +41,7 @@ export default function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
 
   const { queue, isLoading, error, callNext } = useFirebaseQueue();
 
@@ -169,8 +173,7 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <main
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#e5e9ff" }}
+        className="min-h-screen flex items-center justify-center bg-black text-white"
       >
         <Card className="w-full max-w-md mx-4">
           <Header
@@ -236,16 +239,29 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen" style={{ background: "#e5e9ff" }}>
+    <main className="min-h-screen bg-black text-white">
       {/* Header fixo */}
       <div
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{ background: "#e5e9ff" }}
+        className="fixed top-0 left-0 right-0 z-50 bg-black text-white"
       >
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Lado esquerdo - vazio para balanceamento */}
-            <div className="w-20"></div>
+            {/* Lado esquerdo - Configurações */}
+            <div className="w-auto flex items-center gap-3">
+              <button
+                onClick={() => setShowConfig(!showConfig)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <Settings className="w-4 h-4 text-gray-600" />
+                {/* Texto responsivo: mobile só ícone, desktop com texto */}
+                <span className="hidden sm:inline text-gray-700">Configuração</span>
+                {showConfig ? (
+                  <ChevronUp className="w-4 h-4 text-gray-600" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                )}
+              </button>
+            </div>
 
             {/* Centro - Título Admin */}
             <div className="text-center">
@@ -260,17 +276,16 @@ export default function AdminPage() {
                 {!isLoading && !error ? (
                   <>
                     <Wifi className="w-4 h-4 text-green-500" />
-                    <span className="text-green-700">Conectado</span>
+                    <span className="text-green-700"></span>
                   </>
                 ) : isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-blue-700">Conectando...</span>
-                  </>
+                    <span className="text-blue-700"></span>                  </>
                 ) : (
                   <>
                     <WifiOff className="w-4 h-4 text-red-500" />
-                    <span className="text-red-700">Desconectado</span>
+                    <span className="text-red-700"></span>
                   </>
                 )}
               </div>
@@ -302,7 +317,7 @@ export default function AdminPage() {
 
 
           {/* Painel de Configurações */}
-          <ConfigPanel />
+          <ConfigPanel show={showConfig} />
 
           {/* Pessoas Chamadas - Separadas por fila */}
           <div className="hidden lg:grid lg:grid-cols-2 gap-6">
@@ -324,12 +339,140 @@ export default function AdminPage() {
 
           {/* Mobile: Lista de Chamados com Tabs */}
           <div className="lg:hidden">
-            <CalledPeopleList
-              calledPeople={calledPeople}
-              onConfirm={(id: string) => confirmPresence(id)}
-              onNoShow={(id: string) => markAsNoShow(id)}
-              onRemove={(id: string) => {}} // Não usado mais
-            />
+            <Tabs defaultValue="confissoes" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
+                <TabsTrigger
+                  value="confissoes"
+                  className="flex items-center space-x-2 data-[state=active]:bg-christblue data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+                >
+                  <Heart className="w-4 h-4" />
+                  <span>Confissões</span>
+                  <Badge 
+                    variant="secondary" 
+                    className="ml-1 data-[state=active]:bg-white data-[state=active]:text-christblue"
+                  >
+                    {confissoesQueue.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="direcao-espiritual"
+                  className="flex items-center space-x-2 data-[state=active]:bg-christgreen data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Direção Espiritual</span>
+                  <Badge 
+                    variant="secondary" 
+                    className="ml-1 data-[state=active]:bg-white data-[state=active]:text-christgreen"
+                  >
+                    {direcaoEspiritualQueue.length}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="confissoes" className="mt-6">
+                {/* Chamados */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-christblue-dark mb-3 flex items-center">
+                    <Bell className="w-5 h-5 mr-2" />
+                    Chamados - Confissões
+                  </h3>
+                  <CalledPeopleList
+                    calledPeople={calledPeople.filter(p => p.queueType === "confissoes")}
+                    queueType="confissoes"
+                    onConfirm={(id: string) => confirmPresence(id)}
+                    onNoShow={(id: string) => markAsNoShow(id)}
+                    onRemove={(id: string) => {}} // Não usado mais
+                  />
+                </div>
+
+                {/* Fila */}
+                <div>
+                  <h3 className="text-lg font-semibold text-christblue-dark mb-3 flex items-center">
+                    <Heart className="w-5 h-5 mr-2" />
+                    Fila - Confissões
+                  </h3>
+                  <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
+                    <CardHeader className="space-y-2 flex-shrink-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl font-sans text-christblue-dark">
+                          Confissões
+                        </CardTitle>
+                        <Heart className="w-6 h-6 text-christblue" />
+                      </div>
+                      <CardDescription className="text-muted-foreground">
+                        <div className="flex justify-between text-sm">
+                          <span>Na fila: {confissoesQueue.length}</span>
+                          <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
+                        </div>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden">
+                      <QueueContent
+                        queueType="confissoes"
+                        queue={confissoesQueue}
+                        title="Confissões"
+                        icon={Heart}
+                        colorClass="bg-christblue"
+                        borderClass="border-christblue"
+                        bgClass="bg-christblue-light/50"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="direcao-espiritual" className="mt-6">
+                {/* Chamados */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-christgreen-dark mb-3 flex items-center">
+                    <Bell className="w-5 h-5 mr-2" />
+                    Chamados - Direção Espiritual
+                  </h3>
+                  <CalledPeopleList
+                    calledPeople={calledPeople.filter(p => p.queueType === "direcao-espiritual")}
+                    queueType="direcao-espiritual"
+                    onConfirm={(id: string) => confirmPresence(id)}
+                    onNoShow={(id: string) => markAsNoShow(id)}
+                    onRemove={(id: string) => {}} // Não usado mais
+                  />
+                </div>
+
+                {/* Fila */}
+                <div>
+                  <h3 className="text-lg font-semibold text-christgreen-dark mb-3 flex items-center">
+                    <Users className="w-5 h-5 mr-2" />
+                    Fila - Direção Espiritual
+                  </h3>
+                  <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
+                    <CardHeader className="space-y-2 flex-shrink-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl font-sans text-christgreen-dark">
+                          Direção Espiritual
+                        </CardTitle>
+                        <Users className="w-6 h-6 text-christgreen" />
+                      </div>
+                      <CardDescription className="text-muted-foreground">
+                        <div className="flex justify-between text-sm">
+                          <span>Na fila: {direcaoEspiritualQueue.length}</span>
+                          <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
+                        </div>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-hidden">
+                      <QueueContent
+                        queueType="direcao-espiritual"
+                        queue={direcaoEspiritualQueue}
+                        title="Direção Espiritual"
+                        icon={Users}
+                        colorClass="bg-christgreen"
+                        borderClass="border-christgreen"
+                        bgClass="bg-christgreen-light/50"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Desktop: Grid de Filas */}
@@ -391,100 +534,6 @@ export default function AdminPage() {
                 />
               </CardContent>
             </Card>
-          </div>
-
-          {/* Mobile: Tabs */}
-          <div className="md:hidden">
-            <Tabs defaultValue="confissoes" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
-                <TabsTrigger
-                  value="confissoes"
-                  className="flex items-center space-x-2 data-[state=active]:bg-christblue data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
-                >
-                  <Heart className="w-4 h-4" />
-                  <span>Confissões</span>
-                  <Badge 
-                    variant="secondary" 
-                    className="ml-1 data-[state=active]:bg-white data-[state=active]:text-christblue"
-                  >
-                    {confissoesQueue.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="direcao-espiritual"
-                  className="flex items-center space-x-2 data-[state=active]:bg-christgreen data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
-                >
-                  <Users className="w-4 h-4" />
-                  <span>Direção Espiritual</span>
-                  <Badge 
-                    variant="secondary" 
-                    className="ml-1 data-[state=active]:bg-white data-[state=active]:text-white data-[state=active]:text-christgreen"
-                  >
-                    {direcaoEspiritualQueue.length}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="confissoes" className="mt-6">
-                <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
-                  <CardHeader className="space-y-2 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-xl font-sans text-christblue-dark">
-                        Confissões
-                      </CardTitle>
-                      <Heart className="w-6 h-6 text-christblue" />
-                    </div>
-                    <CardDescription className="text-muted-foreground">
-                      <div className="flex justify-between text-sm">
-                        <span>Na fila: {confissoesQueue.length}</span>
-                        <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-hidden">
-                    <QueueContent
-                      queueType="confissoes"
-                      queue={confissoesQueue}
-                      title="Confissões"
-                      icon={Heart}
-                      colorClass="bg-christblue"
-                      borderClass="border-christblue"
-                      bgClass="bg-christblue-light/50"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="direcao-espiritual" className="mt-6">
-                <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
-                  <CardHeader className="space-y-2 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-xl font-sans text-christgreen-dark">
-                        Direção Espiritual
-                      </CardTitle>
-                      <Users className="w-6 h-6 text-christgreen" />
-                    </div>
-                    <CardDescription className="text-muted-foreground">
-                      <div className="flex justify-between text-sm">
-                        <span>Na fila: {direcaoEspiritualQueue.length}</span>
-                        <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-hidden">
-                    <QueueContent
-                      queueType="direcao-espiritual"
-                      queue={direcaoEspiritualQueue}
-                      title="Direção Espiritual"
-                      icon={Users}
-                      colorClass="bg-christgreen"
-                      borderClass="border-christgreen"
-                      bgClass="bg-christgreen-light/50"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
           </div>
 
           {/* Botão para limpar histórico */}

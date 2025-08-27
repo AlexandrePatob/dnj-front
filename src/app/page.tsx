@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, Phone, ArrowRight, Cross, Heart, Users } from "lucide-react";
+import { User, Phone, ArrowRight } from "lucide-react";
 import { User as UserType } from "@/lib/types";
 import { Header } from "@/components";
 
@@ -106,12 +106,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
-      <Header 
-        title="DNJ"
-        subtitle="Espaço Esperança"
-        showLogo={true}
-      />
+    <div className="min-h-screen bg-black text-white p-4">
+      <Header title="DNJ" subtitle="Espaço Esperança" showLogo={true} />
 
       {/* Formulário de Cadastro */}
       <div className="max-w-md mx-auto">
@@ -132,7 +128,7 @@ export default function Home() {
                   type="text"
                   value={name}
                   onChange={handleNameChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-black ${
                     nameError ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Digite seu nome completo"
@@ -156,7 +152,7 @@ export default function Home() {
                   type="tel"
                   value={phone}
                   onChange={handlePhoneChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-black ${
                     phoneError ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="(41) 9 9999-9999"

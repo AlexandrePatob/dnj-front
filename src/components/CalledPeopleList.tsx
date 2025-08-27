@@ -162,10 +162,10 @@ export function CalledPeopleList({
   // Definir título e ícone baseado no tipo
   const getQueueTitle = () => {
     if (title) return title;
-    if (queueType === "confissoes") return "Confissões - Lista de Chamados";
+    if (queueType === "confissoes") return "Confissões - Chamados";
     if (queueType === "direcao-espiritual")
-      return "Direção Espiritual - Lista de Chamados";
-    return "Lista de Chamados";
+      return "Direção Espiritual - Chamados";
+    return "Chamados";
   };
 
   const getQueueIcon = () => {
@@ -178,101 +178,97 @@ export function CalledPeopleList({
 
   // Componente para renderizar uma pessoa chamada
   const CalledPersonItem = ({ person }: { person: CalledPerson }) => {
-    // Verificar se esta pessoa está em ambas as filas
-    const personInBothQueues = calledPeople.filter(p => 
-      p.name === person.name && p.phone === person.phone && p.status === 'waiting'
-    ).length > 1;
-
     return (
       <div
         key={person.id}
-        className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+        className={`p-3 rounded-lg border-2 transition-all duration-200 ${
           person.status === "waiting"
             ? "border-yellow-200 bg-yellow-50"
             : person.status === "confirmed"
             ? "border-green-200 bg-green-50"
             : "border-red-200 bg-red-50"
-        } ${personInBothQueues ? 'ring-2 ring-orange-300' : ''}`}
+        }`}
       >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="font-semibold text-lg text-gray-800">
-              {person.name}
-            </h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {person.queueType === "confissoes"
-                  ? "Confissões"
-                  : "Direção Espiritual"}
-              </span>
-              <span className="text-xs text-gray-400">
-                • Chamado às {new Date(person.calledAt).toLocaleTimeString('pt-BR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </span>
-              {personInBothQueues && (
-                <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-300">
-                  ⚠️ Em ambas
-                </Badge>
-              )}
+        <div className="flex flex-col space-y-2">
+          {/* Header com nome e status */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base text-gray-800 truncate">
+                {person.name}
+              </h3>
+              <div className="flex flex-col space-y-1 text-xs text-gray-600 mt-1">
+                <span>
+                  {person.queueType === "confissoes"
+                    ? "Confissões"
+                    : "Direção Espiritual"}
+                </span>
+                <span className="text-gray-400">
+                  Chamado às {new Date(person.calledAt).toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end space-y-2 ml-3 flex-shrink-0">
+              <Badge className={getStatusColor(person.status)}>
+                <div className="flex items-center gap-1">
+                  {getStatusIcon(person.status)}
+                  <span className="text-xs">{getStatusText(person.status)}</span>
+                </div>
+              </Badge>
+
+              {person.status === "waiting" &&
+                timeLeft[person.id] !== undefined && (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {formatTime(timeLeft[person.id])}
+                  </Badge>
+                )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Badge className={getStatusColor(person.status)}>
-              <div className="flex items-center gap-1">
-                {getStatusIcon(person.status)}
-                {getStatusText(person.status)}
-              </div>
-            </Badge>
+          {/* Botões de ação */}
+          {person.status === "waiting" && (
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                onClick={() => onConfirm(person.id)}
+                size="sm"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Sim (Compareceu)
+              </Button>
+              <Button
+                onClick={() => onNoShow(person.id)}
+                size="sm"
+                variant="outline"
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50 text-sm py-2"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Não (Não Compareceu)
+              </Button>
+            </div>
+          )}
 
-            {person.status === "waiting" &&
-              timeLeft[person.id] !== undefined && (
-                <Badge variant="outline" className="font-mono">
-                  {formatTime(timeLeft[person.id])}
-                </Badge>
-              )}
-          </div>
+          {/* Status de confirmação */}
+          {person.status === "confirmed" && (
+            <div className="text-center py-2">
+              <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                ✅ Confirmado! Sumindo em instantes...
+              </span>
+            </div>
+          )}
+
+          {/* Status de no-show */}
+          {person.status === "no-show" && (
+            <div className="text-center py-2">
+              <span className="text-sm font-medium text-red-600 bg-red-100 px-3 py-1 rounded-full">
+                ❌ Não compareceu! Sumindo em instantes...
+              </span>
+            </div>
+          )}
         </div>
-
-        {person.status === "waiting" && (
-          <div className="flex gap-2">
-            <Button
-              onClick={() => onConfirm(person.id)}
-              size="sm"
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Sim (Compareceu)
-            </Button>
-            <Button
-              onClick={() => onNoShow(person.id)}
-              size="sm"
-              variant="outline"
-              className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Não (Não Compareceu)
-            </Button>
-          </div>
-        )}
-
-        {person.status === "confirmed" && (
-          <div className="text-center py-2">
-            <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
-              ✅ Confirmado! Sumindo em instantes...
-            </span>
-          </div>
-        )}
-
-        {person.status === "no-show" && (
-          <div className="text-center py-2">
-            <span className="text-sm font-medium text-red-600 bg-red-100 px-3 py-1 rounded-full">
-              ❌ Não compareceu! Sumindo em instantes...
-            </span>
-          </div>
-        )}
       </div>
     );
   };
@@ -376,7 +372,7 @@ export function CalledPeopleList({
             <CardHeader>
               <CardTitle className="text-xl text-christblue-dark flex items-center gap-2">
                 <Heart className="w-6 h-6 text-christblue" />
-                Confissões - Lista de Chamados
+                Confissões - Chamados
                 <Badge variant="secondary" className="ml-2">
                   {confissoesCalledPeople.length}
                 </Badge>
@@ -403,7 +399,7 @@ export function CalledPeopleList({
             <CardHeader>
               <CardTitle className="text-xl text-christgreen-dark flex items-center gap-2">
                 <Users className="w-6 h-6 text-christgreen" />
-                Direção Espiritual - Lista de Chamados
+                Direção Espiritual - Chamados
                 <Badge variant="secondary" className="ml-2">
                   {direcaoEspiritualCalledPeople.length}
                 </Badge>

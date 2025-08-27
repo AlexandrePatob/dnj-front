@@ -39,3 +39,17 @@ export interface WebSocketMessage {
 
 export type QueueType = 'confissoes' | 'direcao-espiritual';
 
+// Tipo para validação de usuário
+export interface QueueValidation {
+  canJoin: boolean;
+  reason?: string;
+  existingQueues?: QueueType[];
+  isAlreadyWaiting?: boolean;
+  isAlreadyCalled?: boolean;
+  message?: string;
+  currentPosition?: number;
+  currentQueueType?: QueueType;
+  shouldRecover?: boolean;
+  calling?: boolean;
+}
+

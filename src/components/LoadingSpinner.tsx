@@ -1,6 +1,6 @@
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg" | "xl";
-  color?: "blue" | "red" | "green" | "gray";
+  color?: "blue" | "red" | "green" | "gray" | "white";
   className?: string;
 }
 
@@ -20,7 +20,8 @@ export function LoadingSpinner({
     blue: "border-blue-600",
     red: "border-red-600",
     green: "border-green-600",
-    gray: "border-gray-600"
+    gray: "border-gray-600",
+    white: "border-white"
   };
 
   return (

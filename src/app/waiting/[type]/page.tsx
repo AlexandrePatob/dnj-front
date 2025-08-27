@@ -23,15 +23,15 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   const [user, setUser] = useState<User | null>(null);
   const [showAlmostThere, setShowAlmostThere] = useState(false);
   const [showCalled, setShowCalled] = useState(false);
-  const [showThankYou, setShowThankYou] = useState(false);
 
   // Estados para controle de entrada na fila
   const [queueStatus, setQueueStatus] = useState<
-    "joining" | "joined" | "error"
+    "joining" | "joined" | "error" | "validation-error"
   >("joining");
   const [errorMessage, setErrorMessage] = useState("");
   const [hasJoinedQueue, setHasJoinedQueue] = useState(false);
   const [isAddingToQueue, setIsAddingToQueue] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState<number | null>(null);
 
   const router = useRouter();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +47,8 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     error
   } = useWaitingStatus(user, queueType);
 
-
+  // Usar o hook da fila para validação
+  const { validateUserCanJoinQueue } = useFirebaseQueue();
 
   // Função para buscar usuário do localStorage em tempo real
   const getUser = (): User | null => {
@@ -100,6 +101,31 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         hasAttemptedToJoinRef.current = true; // Marca que já tentou
         setIsAddingToQueue(true); // Ativar loading
         setQueueStatus("joining");
+
+        // Primeiro validar se pode entrar na fila
+        const validation = await validateUserCanJoinQueue(currentUser, queueType);
+
+        if(validation.calling) {
+          setShowCalled(true);
+          return;
+        }
+        
+        if (!validation.canJoin) {
+          // Se o usuário já está na fila e pode recuperar o status
+          if (validation.shouldRecover && validation.currentPosition) {
+            setCurrentPosition(validation.currentPosition);
+            setQueueStatus("joined");
+            setHasJoinedQueue(true);
+            return;
+          }
+          
+          // Se não pode recuperar, mostrar erro
+          setQueueStatus("validation-error");
+          setErrorMessage(validation.reason || "Não foi possível entrar na fila");
+          return;
+        }
+
+        // Se pode entrar, adicionar à fila
         await addToQueue(currentUser, queueType);
         setQueueStatus("joined");
         setHasJoinedQueue(true);
@@ -132,37 +158,52 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#e5e9ff" }}>
-        <div className="text-center">
-          <LoadingSpinner size="lg" color="blue" className="mx-auto mb-4" />
-          <p className="text-gray-600">Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-center text-white">
+          <LoadingSpinner size="lg" color="white" className="mx-auto mb-4" />
+          <p className="text-white">Carregando...</p>
         </div>
       </div>
     );
   }
 
-  // Tela de agradecimento
-  if (showThankYou) {
-    return (
-      <StateScreen
-        icon={<CheckCircle className="w-10 h-10 text-green-600" />}
-        title="Obrigado!"
-        description="Que Deus abençoe você e sua família. Obrigado por participar do DNJ."
-        buttonText="Voltar ao início"
-        buttonHref="/"
-      />
-    );
+  // Tela de chamada (unificada com agradecimento)
+  if (showCalled) {
+    return <CalledScreen currentUser={user} />;
   }
 
-  // Tela de chamada
-  if (showCalled) {
-    return <CalledScreen onFinishService={() => setShowThankYou(true)} />;
+  // Tela de erro de validação
+  if (queueStatus === "validation-error") {
+    return (
+      <div className="min-h-screen p-4 bg-black text-white">
+        <Header queueType={queueType} />
+
+        <StatusCard
+          icon={<AlertCircle className="w-8 h-8" />}
+          title="Não foi possível entrar na fila"
+          description={errorMessage}
+          status="error"
+          showSpinner={false}
+        >
+          <p className="text-xs text-red-500 mt-4">
+            Você já está em uma fila ou não pode entrar nesta fila no momento.
+          </p>
+          
+          {/* Botão para voltar à seleção */}
+          <BackButton 
+            href="/select-queue" 
+            text="Voltar à seleção" 
+            className="mt-4"
+          />
+        </StatusCard>
+      </div>
+    );
   }
 
   // Tela de entrada na fila (quando ainda não entrou)
   if (queueStatus === "joining") {
     return (
-      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <div className="min-h-screen p-4 bg-black text-white">
         <Header
           title="DNJ - Fila"
           subtitle={
@@ -194,7 +235,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de erro na entrada da fila
   if (queueStatus === "error") {
     return (
-      <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+      <div className="min-h-screen p-4 bg-black text-white">
         <Header queueType={queueType} />
 
         <StatusCard
@@ -228,7 +269,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   // Tela principal de espera (quando já entrou na fila)
   return (
-    <div className="min-h-screen p-4" style={{ background: "#e5e9ff" }}>
+    <div className="min-h-screen p-4 bg-black text-white">
       <Header queueType={queueType} />
 
       <QueueStatusCard
@@ -275,7 +316,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
       {!isAddingToQueue && (
         <BackButton 
           href="/select-queue" 
-          text="Voltar à seleção" 
+            text="Voltar à seleção" 
         />
       )}
     </div>
