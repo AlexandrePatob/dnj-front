@@ -276,7 +276,7 @@ export function CalledPeopleList({
   // Se não há pessoas chamadas, mostrar mensagem vazia
   if (calledPeople.length === 0) {
     return (
-      <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+      <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
             {getQueueIcon()}
@@ -284,7 +284,7 @@ export function CalledPeopleList({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-8">
+          <p className="text-center text-muted-foreground py-8 text-black">
             Ninguém chamado no momento
           </p>
         </CardContent>
@@ -296,7 +296,7 @@ export function CalledPeopleList({
   if (queueType) {
     if (filteredCalledPeople.length === 0) {
       return (
-        <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+        <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
               {getQueueIcon()}
@@ -304,7 +304,7 @@ export function CalledPeopleList({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center text-muted-foreground py-8">
+            <p className="text-center text-muted-foreground py-8 text-black">
               Ninguém chamado no momento
             </p>
           </CardContent>
@@ -313,7 +313,7 @@ export function CalledPeopleList({
     }
 
     return (
-      <Card className="border-2 border-gray-200 bg-white/80 backdrop-blur-sm">
+      <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
             {getQueueIcon()}
@@ -368,7 +368,7 @@ export function CalledPeopleList({
         </TabsList>
 
         <TabsContent value="confissoes" className="mt-6">
-          <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm">
+          <Card className="border-2 border-christblue-light bg-white backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl text-christblue-dark flex items-center gap-2">
                 <Heart className="w-6 h-6 text-christblue" />
@@ -395,7 +395,7 @@ export function CalledPeopleList({
         </TabsContent>
 
         <TabsContent value="direcao-espiritual" className="mt-6">
-          <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm">
+          <Card className="border-2 border-christgreen-light bg-white backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-xl text-christgreen-dark flex items-center gap-2">
                 <Users className="w-6 h-6 text-christgreen" />
