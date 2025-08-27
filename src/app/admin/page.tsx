@@ -137,7 +137,7 @@ export default function AdminPage() {
               className={`flex items-center justify-between p-3 rounded-lg ${bgClass} hover:shadow-md transition-shadow duration-200`}
             >
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-lg truncate font-sans">
+                <p className="font-medium text-lg truncate font-sans text-black">
                   {person.name}
                 </p>
               </div>
@@ -265,7 +265,7 @@ export default function AdminPage() {
 
             {/* Centro - Título Admin */}
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-800 font-sans">
+              <h1 className="text-2xl font-bold text-white font-sans">
                 Admin
               </h1>
             </div>
@@ -294,7 +294,7 @@ export default function AdminPage() {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-600 border-red-200 hover:bg-red-50 bg-white"
               >
                 <Lock className="w-4 h-4 mr-2" />
                 Sair
@@ -305,7 +305,7 @@ export default function AdminPage() {
       </div>
 
       {/* Conteúdo principal com padding-top para o header fixo */}
-      <div className="pt-16 p-8">
+      <div className="mt-10 pt-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Informações de debug */}
           {error && (
@@ -391,7 +391,7 @@ export default function AdminPage() {
                     <Heart className="w-5 h-5 mr-2" />
                     Fila - Confissões
                   </h3>
-                  <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
+                  <Card className="border-2 border-christblue-light bg-white backdrop-blur-sm h-[400px] flex flex-col">
                     <CardHeader className="space-y-2 flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-xl font-sans text-christblue-dark">
@@ -443,7 +443,7 @@ export default function AdminPage() {
                     <Users className="w-5 h-5 mr-2" />
                     Fila - Direção Espiritual
                   </h3>
-                  <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm h-[400px] flex flex-col">
+                  <Card className="border-2 border-christgreen-light bg-white backdrop-blur-sm h-[400px] flex flex-col">
                     <CardHeader className="space-y-2 flex-shrink-0">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-xl font-sans text-christgreen-dark">
@@ -478,7 +478,7 @@ export default function AdminPage() {
           {/* Desktop: Grid de Filas */}
           <div className="hidden md:grid md:grid-cols-2 gap-6">
             {/* Fila de Confissões */}
-            <Card className="border-2 border-christblue-light bg-white/80 backdrop-blur-sm h-[500px] flex flex-col">
+            <Card className="border-2 border-christblue-light bg-white backdrop-blur-sm h-[500px] flex flex-col">
               <CardHeader className="space-y-2 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-2xl font-sans text-christblue-dark">
@@ -507,7 +507,7 @@ export default function AdminPage() {
             </Card>
 
             {/* Fila de Direção Espiritual */}
-            <Card className="border-2 border-christgreen-light bg-white/80 backdrop-blur-sm h-[500px] flex flex-col">
+            <Card className="border-2 border-christgreen-light bg-white backdrop-blur-sm h-[500px] flex flex-col">
               <CardHeader className="space-y-2 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-2xl font-sans text-christgreen-dark">
