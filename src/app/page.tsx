@@ -128,7 +128,7 @@ export default function Home() {
                   type="text"
                   value={name}
                   onChange={handleNameChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-black ${
                     nameError ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="Digite seu nome completo"
@@ -152,7 +152,7 @@ export default function Home() {
                   type="tel"
                   value={phone}
                   onChange={handlePhoneChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-black ${
                     phoneError ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="(41) 9 9999-9999"
