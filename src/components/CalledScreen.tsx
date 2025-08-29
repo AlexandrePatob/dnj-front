@@ -9,7 +9,7 @@ interface CalledScreenProps {
 
 export function CalledScreen({ currentUser }: CalledScreenProps) {
   return (
-    <div className="min-h-screen p-4 flex items-center justify-center bg-black text-white">
+    <div className="min-h-screen p-4 flex items-center justify-center bg-[#181818] text-white">
       <div className="max-w-md mx-auto text-center">
         {/* Ícone de chamada */}
         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">

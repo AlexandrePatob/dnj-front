@@ -14,4 +14,5 @@ export { TipsCard } from "./TipsCard";
 export { AlertCard } from "./AlertCard";
 export { StateScreen } from "./StateScreen";
 export { CalledScreen } from "./CalledScreen";
-export { CalledPeopleList } from "./CalledPeopleList"; 
+export { CalledPeopleList } from "./CalledPeopleList";
+export { FloatingPositionHeader } from "./FloatingPositionHeader"; 

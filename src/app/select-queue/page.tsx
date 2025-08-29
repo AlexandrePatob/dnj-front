@@ -21,7 +21,7 @@ export default function SelectQueue() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-[#181818]">
         <div className="text-center text-white">
           <LoadingSpinner size="lg" color="white" className="mx-auto mb-4" />
           <p className="text-white">Carregando...</p>
@@ -31,15 +31,15 @@ export default function SelectQueue() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
+    <div className="min-h-screen bg-[#181818] text-white p-4">
       {/* Header com logos e grade de ícones */}
-      <Header title="Espaco Esperança" subtitle="Escolha o tipo de atendimento" showLogo={true} />
+      <Header subtitle="Escolha o tipo de atendimento" showLogo={true} />
 
       {/* Saudação */}
 
       <div className="max-w-screen-sm mx-auto border border-white rounded-xl p-6">
         <div className="max-w-md mx-auto mb-6">
-          <div className="bg-black rounded-2xl shadow-lg p-6">
+          <div className="bg-[#181818] rounded-2xl shadow-lg p-6">
             <h2 className="text-xl font-semibold text-white mb-2 text-center">
               Olá, {user.name}!
             </h2>
@@ -50,7 +50,7 @@ export default function SelectQueue() {
         </div>
 
         {/* Opções de Fila */}
-        <div className="max-w-md mx-auto space-y-4 mb-20">
+        <div className="max-w-md mx-auto space-y-4 sm:mb-14 md:mb-20">
           {/* Fila de Confissão */}
           <button
             onClick={() => router.push("/waiting/confissoes")}
@@ -95,7 +95,7 @@ export default function SelectQueue() {
         </div>
       </div>
 
-      <BackButton href="/" text="Voltar ao início" className="mt-8" />
+      <BackButton href="/" text="Voltar ao início" className="mt-8 text-white" />
     </div>
   );
 }

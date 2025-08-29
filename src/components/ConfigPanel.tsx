@@ -96,7 +96,7 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
     <div className="space-y-6">
       {/* Posição "Quase Lá" */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-sm font-medium text-white">
           Posição para notificação "Quase Lá"
         </label>
         <div className="flex items-center space-x-2">
@@ -109,13 +109,13 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
               ...prev,
               almostTherePosition: parseInt(e.target.value) || 1
             }))}
-            className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
           />
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-white">
             (1-20)
           </span>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-white">
           Enviar WhatsApp quando a pessoa estiver entre as {config.almostTherePosition} primeiras posições
         </p>
       </div>
@@ -132,11 +132,11 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
             }))}
             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-white">
             Habilitar notificações WhatsApp
           </span>
         </label>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-white">
           Controla se o sistema deve enviar mensagens via WhatsApp
         </p>
       </div>

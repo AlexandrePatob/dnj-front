@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export function Header({ 
-  title = "DNJ - Fila", 
+  title, 
   subtitle, 
   queueType,
   showLogo = true 
@@ -27,17 +27,21 @@ export function Header({
   return (
     <div className="text-center mb-8 pt-8">
       {showLogo && (
-        <div className="inline-flex items-center justify-center w-[5rem] h-16 bg-blue-600 rounded-xl mb-4">
+        <div className="inline-flex items-center justify-center w-full h-full rounded-xl mb-4">
           <Image 
-            src="https://dnjcuritiba.com.br/wp-content/uploads/2025/07/Vector.png" 
+            src="/logo-fila.png" 
             alt="Logo DNJ" 
-            width={64} 
-            height={64} 
+            width={450} 
+            height={450} 
           />
         </div>
       )}
-      <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
-      <p className="text-white text-sm">{getDefaultSubtitle()}</p>
+      {title && (
+        <h1 className="text-3xl font-bold text-white mb-2">{title}</h1>
+      )}
+      {subtitle && (
+        <p className="text-white text-sm">{getDefaultSubtitle()}</p>
+      )}
     </div>
   );
 }

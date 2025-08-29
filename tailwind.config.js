@@ -9,7 +9,7 @@ module.exports = {
     extend: {
       fontFamily: {
         serif: ['var(--font-merriweather)', 'Merriweather', 'serif'],
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Montserrat', 'sans-serif'],
       },
       colors: {
         christblue: {
