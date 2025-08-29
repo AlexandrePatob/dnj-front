@@ -158,7 +158,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-[#181818]">
         <div className="text-center text-white">
           <LoadingSpinner size="lg" color="white" className="mx-auto mb-4" />
           <p className="text-white">Carregando...</p>
@@ -175,7 +175,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de erro de validação
   if (queueStatus === "validation-error") {
     return (
-      <div className="min-h-screen p-4 bg-black text-white">
+      <div className="min-h-screen p-4 bg-[#181818] text-white">
         <Header queueType={queueType} />
 
         <StatusCard
@@ -203,7 +203,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de entrada na fila (quando ainda não entrou)
   if (queueStatus === "joining") {
     return (
-      <div className="min-h-screen p-4 bg-black text-white">
+      <div className="min-h-screen p-4 bg-[#181818] text-white">
         <Header
           title="DNJ - Fila"
           subtitle={
@@ -235,7 +235,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   // Tela de erro na entrada da fila
   if (queueStatus === "error") {
     return (
-      <div className="min-h-screen p-4 bg-black text-white">
+      <div className="min-h-screen p-4 bg-[#181818] text-white">
         <Header queueType={queueType} />
 
         <StatusCard
@@ -269,7 +269,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   // Tela principal de espera (quando já entrou na fila)
   return (
-    <div className="min-h-screen p-4 bg-black text-white">
+    <div className="min-h-screen p-4 bg-[#181818] text-white">
       <Header queueType={queueType} />
 
       <QueueStatusCard

@@ -173,11 +173,10 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <main
-        className="min-h-screen flex items-center justify-center bg-black text-white"
+        className="min-h-screen w-full flex items-center justify-center bg-[#181818] text-white"
       >
-        <Card className="w-full max-w-md mx-4">
+        <Card className="w-full max-w-lg mx-4">
           <Header
-            title="DNJ"
             subtitle="Painel Administrativo"
             showLogo={true}
           />
@@ -188,14 +187,14 @@ export default function AdminPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black w-5 h-5" />
                   <input
                     id="email"
                     type="email"
                     placeholder="Digite seu email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                     required
                   />
                 </div>
@@ -206,14 +205,14 @@ export default function AdminPage() {
                   Senha
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-black w-5 h-5" />
                   <input
                     id="password"
                     type="password"
                     placeholder="Digite sua senha"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                     required
                   />
                 </div>
@@ -239,10 +238,10 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-[#181818] text-white">
       {/* Header fixo */}
       <div
-        className="fixed top-0 left-0 right-0 z-50 bg-black text-white"
+        className="fixed top-0 left-0 right-0 z-50 bg-[#181818] text-white"
       >
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -400,7 +399,7 @@ export default function AdminPage() {
                         <Heart className="w-6 h-6 text-christblue" />
                       </div>
                       <CardDescription className="text-muted-foreground">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-sm text-black">
                           <span>Na fila: {confissoesQueue.length}</span>
                           <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                         </div>
@@ -452,7 +451,7 @@ export default function AdminPage() {
                         <Users className="w-6 h-6 text-christgreen" />
                       </div>
                       <CardDescription className="text-muted-foreground">
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-sm text-black">
                           <span>Na fila: {direcaoEspiritualQueue.length}</span>
                           <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                         </div>
@@ -487,7 +486,7 @@ export default function AdminPage() {
                   <Heart className="w-8 h-8 text-christblue" />
                 </div>
                 <CardDescription className="text-muted-foreground">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-sm text-black">
                     <span>Na fila: {confissoesQueue.length}</span>
                     <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                   </div>
@@ -516,7 +515,7 @@ export default function AdminPage() {
                   <Users className="w-8 h-8 text-christgreen" />
                 </div>
                 <CardDescription className="text-muted-foreground">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-sm text-black">
                     <span>Na fila: {direcaoEspiritualQueue.length}</span>
                     <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                   </div>
@@ -536,20 +535,6 @@ export default function AdminPage() {
             </Card>
           </div>
 
-          {/* Botão para limpar histórico */}
-          {calledPeople.length > 0 && (
-            <div className="text-center">
-              <Button
-                onClick={clearHistory}
-                variant="outline"
-                size="sm"
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Limpar Histórico
-              </Button>
-            </div>
-          )}
 
           {/* Mensagem de fé */}
           <p className="text-center text-sm text-muted-foreground italic font-sans">

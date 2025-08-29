@@ -106,8 +106,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <Header title="DNJ" subtitle="Espaço Esperança" showLogo={true} />
+    <div className="min-h-screen bg-[#181818] text-white p-4">
+      <Header showLogo={true} />
 
       {/* Formulário de Cadastro */}
       <div className="max-w-md mx-auto">
