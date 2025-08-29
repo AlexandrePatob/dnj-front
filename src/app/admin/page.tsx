@@ -23,6 +23,7 @@ import {
   Settings,
   ChevronUp,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { QueueItem, QueueType } from "../../lib/types";
 import { useFirebaseQueue } from "../../lib/useFirebaseQueue";
@@ -164,6 +165,7 @@ export default function AdminPage() {
         >
           <Bell className="w-4 h-4 mr-2" />
           Chamar Próximo
+          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
         </Button>
       </div>
     </div>
