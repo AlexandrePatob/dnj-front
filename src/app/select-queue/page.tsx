@@ -95,7 +95,7 @@ export default function SelectQueue() {
         </div>
       </div>
 
-      <BackButton href="/" text="Voltar ao início" className="mt-8" />
+      <BackButton href="/" text="Voltar ao início" className="mt-8 text-white" />
     </div>
   );
 }

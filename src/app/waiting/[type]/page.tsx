@@ -16,6 +16,7 @@ import {
   AlertCard,
   StateScreen,
   CalledScreen,
+  FloatingPositionHeader,
 } from "../../../components";
 
 export default function WaitingPage({ params }: { params: { type: string } }) {
@@ -44,7 +45,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     isCalled,
     hasProcessedQueueUpdate,
     isLoading,
-    error
+    error,
   } = useWaitingStatus(user, queueType);
 
   // Usar o hook da fila para validação
@@ -92,7 +93,8 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   useEffect(() => {
     const enterQueue = async () => {
       // Se já tentou ou já está processando, não faz nada
-      if (hasAttemptedToJoinRef.current || hasJoinedQueue || isAddingToQueue) return;
+      if (hasAttemptedToJoinRef.current || hasJoinedQueue || isAddingToQueue)
+        return;
 
       const currentUser = getUser();
       if (!currentUser) return;
@@ -103,13 +105,16 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         setQueueStatus("joining");
 
         // Primeiro validar se pode entrar na fila
-        const validation = await validateUserCanJoinQueue(currentUser, queueType);
+        const validation = await validateUserCanJoinQueue(
+          currentUser,
+          queueType
+        );
 
-        if(validation.calling) {
+        if (validation.calling) {
           setShowCalled(true);
           return;
         }
-        
+
         if (!validation.canJoin) {
           // Se o usuário já está na fila e pode recuperar o status
           if (validation.shouldRecover && validation.currentPosition) {
@@ -118,10 +123,12 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
             setHasJoinedQueue(true);
             return;
           }
-          
+
           // Se não pode recuperar, mostrar erro
           setQueueStatus("validation-error");
-          setErrorMessage(validation.reason || "Não foi possível entrar na fila");
+          setErrorMessage(
+            validation.reason || "Não foi possível entrar na fila"
+          );
           return;
         }
 
@@ -131,8 +138,10 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         setHasJoinedQueue(true);
       } catch (error) {
         setQueueStatus("error");
-        setErrorMessage(error instanceof Error ? error.message : "Erro ao entrar na fila");
-        
+        setErrorMessage(
+          error instanceof Error ? error.message : "Erro ao entrar na fila"
+        );
+
         // Tentar continuar mesmo com erro
         setTimeout(() => {
           setQueueStatus("joined");
@@ -188,12 +197,12 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           <p className="text-xs text-red-500 mt-4">
             Você já está em uma fila ou não pode entrar nesta fila no momento.
           </p>
-          
+
           {/* Botão para voltar à seleção */}
-          <BackButton 
-            href="/select-queue" 
-            text="Voltar à seleção" 
-            className="mt-4"
+          <BackButton
+            href="/select-queue"
+            text="Voltar à seleção"
+            className="mt-4 text-white"
           />
         </StatusCard>
       </div>
@@ -207,7 +216,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         <Header
           title="DNJ - Fila"
           subtitle={
-            queueType === "confissoes" 
+            queueType === "confissoes"
               ? "Entrando na Fila de Confissão"
               : "Entrando na Fila de Direção Espiritual"
           }
@@ -218,14 +227,18 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           icon={<Clock className="w-8 h-8" />}
           title="Entrando na fila..."
           description={
-            isAddingToQueue ? "Adicionando você à fila..." : "Conectando ao sistema..."
+            isAddingToQueue
+              ? "Adicionando você à fila..."
+              : "Conectando ao sistema..."
           }
           status="loading"
           showSpinner={true}
           spinnerColor="blue"
         >
           <p className="text-xs text-gray-500 mt-4">
-            {isAddingToQueue ? "Aguarde, não clique novamente..." : "Aguarde um momento..."}
+            {isAddingToQueue
+              ? "Aguarde, não clique novamente..."
+              : "Aguarde um momento..."}
           </p>
         </StatusCard>
       </div>
@@ -249,7 +262,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           <p className="text-xs text-red-500 mt-4">
             Tentando método alternativo...
           </p>
-          
+
           {/* Botão para tentar novamente */}
           <button
             onClick={() => {
@@ -272,53 +285,91 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     <div className="min-h-screen p-4 bg-[#181818] text-white">
       <Header queueType={queueType} />
 
-      <QueueStatusCard
-        userName={user.name}
-        position={userPosition}
-        totalInQueue={totalInQueue}
-        isConnected={!isLoading && !error}
-        hasProcessedQueueUpdate={hasProcessedQueueUpdate}
+      {/* Header flutuante com posição */}
+      <FloatingPositionHeader
+        userName={user?.name || ""}
+        position={userPosition || 0}
+        totalInQueue={totalInQueue || 0}
+        isVisible={!!userPosition && userPosition > 0}
+        direction={queueType}
       />
 
-      {/* Mensagem de feedback durante entrada na fila */}
-      {isAddingToQueue && (
-        <AlertCard
-          type="info"
-          icon={<Clock className="w-6 h-6" />}
-          title="Adicionando à fila..."
-          description="Aguarde um momento, estamos processando sua entrada na fila."
-          subtitle="Não feche esta página"
-        />
-      )}
+      {/* Layout principal simplificado */}
+      <div className="sm:max-w-md md:max-w-2xl lg:max-w-4xl mx-auto">
+        {/* Seção superior com posição e alertas unidos */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
+          <div className="grid grid-rows-1 md:grid-rows-2 lg:grid-rows-1 gap-6">
+            {/* Card de status da fila */}
+            <div className="text-center w-full max-h-sm ">
+              <h2 className="text-lg text-center mb-2 uppercase text-black">
+                {queueType === "confissoes" ? "Confissão" : "Direção Espiritual"}
+              </h2>
+              <div className="flex flex-col justify-center items-center bg-gray-50 rounded-lg p-5 flex-1 min-w-[220px]">
+                <span className="text-xl font-semibold text-gray-800 mb-2">
+                  {user?.name}
+                </span>
+                {userPosition === 1 ? (
+                  <span className="text-lg text-blue-700 mt-2 font-semibold">
+                    Você é o próximo, aguarde ser chamado!
+                  </span>
+                ) : (
+                  <span className="text-2xl text-gray-700 mt-2">
+                    Você está na posição{" "}
+                    <span className="font-bold text-[#5446fe]">
+                      {userPosition}ª
+                    </span>
+                    .
+                  </span>
+                )}
+                {totalInQueue > 1 && (
+                  <span className="text-lg text-gray-700">
+                    Total na fila{" "}
+                    <span className="text-bold text-gray-800">
+                      {totalInQueue}
+                    </span>
+                    .
+                  </span>
+                )}
+              </div>
+            </div>
+            <div>
+              <TipsCard queueType={queueType} />
+            </div>
+            {/* Coluna de alertas e mensagens */}
+            <div className="space-y-4">
+              {/* Mensagem de feedback durante entrada na fila */}
+              {isAddingToQueue && (
+                <AlertCard
+                  type="info"
+                  icon={<Clock className="w-6 h-6" />}
+                  title="Adicionando à fila..."
+                  description="Aguarde um momento, estamos processando sua entrada na fila."
+                  subtitle="Não feche esta página"
+                />
+              )}
 
-      {/* Alertas */}
-      {showAlmostThere && (
-        <AlertCard
-          type="warning"
-          icon={<Bell className="w-6 h-6" />}
-          title="Está quase!"
-          description={`Faltam apenas ${userPosition}. Fique atento!`}
-          subtitle="Notificação enviada via WhatsApp"
-        />
-      )}
+              {/* Mensagem de Atenção */}
+              <AlertCard
+                type="info"
+                icon={<span className="text-xl">⚠️</span>}
+                title="Atenção!"
+                description="Fique atento! Acompanhe para não perder sua vaga"
+              />
+            </div>
+          </div>
+        </div>
 
-      <TipsCard queueType={queueType} />
-
-      {/* Mensagem de Atenção */}
-      <AlertCard
-        type="info"
-        icon={<span className="text-xl">⚠️</span>}
-        title="Atenção!"
-        description="Fique atento! Acompanhe para não perder sua vaga"
-      />
-
-      {/* Botão de voltar - só mostra quando não estiver processando */}
-      {!isAddingToQueue && (
-        <BackButton 
-          href="/select-queue" 
-            text="Voltar à seleção" 
-        />
-      )}
+        {/* Botão de voltar centralizado */}
+        {!isAddingToQueue && (
+          <div className="text-center">
+            <BackButton
+              href="/select-queue"
+              text="Voltar à seleção"
+              className="text-white"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

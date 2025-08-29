@@ -18,14 +18,14 @@ async function sendWhatsAppNotification(
   try {
     let message: string;
     const queueName =
-      queueType === "confissoes" ? "Confissões" : "Direção Espiritual";
+      queueType === "confissoes" ? "Confissão" : "Direção Espiritual";
 
     if (type === "turn") {
       message = `Agora sim! Você foi *_Chamado à Eternidade!_* Chegou sua vez ${name}! :)\n\nFaça uma ótima ${queueName}! Se quiser pode fazer sua oração de penitência ou ação de graças na Paróquia ao lado do Espaço Esperança.\n\nDeus abençoe e Salve Maria!\n_______\n*Esta é uma mensagem automática, não precisa responder :)*`;
     } else if (type === "almost-there") {
       message = `Oba! Está chegando sua vez ${name}! :D\n\n_*Você está na posição ${position}!*_\n\nVá se direcionando para o Espaço Esperança para poder desfrutar da sua ${queueName}!\n_______\n*Esta é uma mensagem automática, não precisa responder :)`;
     } else if (type === "welcome") {
-      message = `Oi ${name}! Você já está na fila para ${queueName}! :D\n\n* Primeiro, fique atento(a) ao número de pessoas na sua frente no web-app!\n* Você pode curtir o DNJ enquanto espera, mas evite ficar muito longe pois pode demorar pra se deslocar.\n* Não deixe de acompanhar a todo momento no site para não perder sua vez!\n* Aqui no whats também iremos tentar te avisar quando estiver chegando próximo da sua vez, ok?\n\nAh, aproveite pra ler algumas dicas que deixamos pra você lá no web-app (onde você se inscreveu pra fila) pra você poder estar preparado para este momento! :)\n\nDesejamos que você tenha uma ${queueName} abençoada!\n\n_*Se, portanto, ressuscitastes com Cristo, buscai as coisas lá do alto, onde Cristo está sentado à direita de Deus. (Col 3,1)*_\n_____________________\n_*Esta é uma mensagem automática, não precisa responder :)_*`;
+      message = `Oi ${name}! Você já está na fila para ${queueName}! :D\n\n* Primeiro, fique atento(a) ao número de pessoas na sua frente no web-app!\n* Você pode curtir o DNJ enquanto espera, mas evite ficar muito longe, pois pode demorar pra se deslocar.\n* Não deixe de acompanhar a todo momento no site para não perder sua vez!\n* Aqui no whats também iremos tentar te avisar quando estiver chegando próximo da sua vez, ok?\n\nAh, aproveite pra ler algumas dicas que deixamos pra você lá no web-app (onde você se inscreveu pra fila) pra você poder estar preparado para este momento! :)\n\nDesejamos que você tenha uma ${queueName} abençoada!\n\n_*Se, portanto, ressuscitastes com Cristo, buscai as coisas lá do alto, onde Cristo está sentado à direita de Deus. (Col 3,1)*_\n_____________________\n_*Esta é uma mensagem automática, não precisa responder :)_*`;
     } else {
       throw new Error("Tipo de mensagem inválido");
     }
