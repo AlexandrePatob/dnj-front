@@ -221,7 +221,7 @@ export function CalledPeopleList({
 
               {person.status === "waiting" &&
                 timeLeft[person.id] !== undefined && (
-                  <Badge variant="outline" className="font-mono text-xs">
+                  <Badge variant="outline" className="font-mono text-xs text-black">
                     {formatTime(timeLeft[person.id])}
                   </Badge>
                 )}

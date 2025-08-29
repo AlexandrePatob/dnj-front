@@ -27,6 +27,7 @@ export function useFirebaseQueue() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCallingNext, setIsCallingNext] = useState(false);
 
   // Função para validar se o usuário pode entrar na fila
   const validateUserCanJoinQueue = useCallback(
@@ -301,6 +302,10 @@ export function useFirebaseQueue() {
         return;
       }
 
+      // Adicionar delay antes de enviar a mensagem "almost-there"
+      // Isso garante que chegue depois do welcome
+      await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos de delay
+
       // Chamar API do Next.js para enviar WhatsApp
       const response = await fetch("/api/whatsapp", {
         method: "POST",
@@ -318,7 +323,7 @@ export function useFirebaseQueue() {
 
       if (response.ok) {
         console.log(
-          `✅ WhatsApp "quase lá" enviado para ${person.name} na posição ${person.position}`
+          `✅ WhatsApp "quase lá" enviado para ${person.name} na posição ${person.position} com delay de 5s`
         );
       } else {
         console.error('❌ Erro ao enviar WhatsApp "quase lá"');
@@ -386,6 +391,7 @@ export function useFirebaseQueue() {
       });
 
       if (response.ok) {
+        console.log(`✅ WhatsApp de boas-vindas enviado para ${person.name}`);
       } else {
         console.error("❌ Erro ao enviar WhatsApp de boas-vindas");
       }
@@ -479,6 +485,7 @@ export function useFirebaseQueue() {
     async (user: User, queueType: QueueType) => {
       try {
         setIsLoading(true);
+        setError(null);
 
         // Validar se pode entrar na fila
         const validation = await validateUserCanJoinQueue(user, queueType);
@@ -544,6 +551,9 @@ export function useFirebaseQueue() {
   const callNext = useCallback(
     async (queueType: QueueType) => {
       try {
+        setIsCallingNext(true);
+        setError(null);
+
         const queueQuery = query(
           collection(db, COLLECTIONS.QUEUE),
           where("queueType", "==", queueType),
@@ -606,6 +616,9 @@ export function useFirebaseQueue() {
         }
       } catch (error) {
         console.error("Erro ao chamar próximo:", error);
+        setError("Erro ao chamar próximo da fila");
+      } finally {
+        setIsCallingNext(false);
       }
     },
     [updatePosition]
@@ -649,7 +662,7 @@ export function useFirebaseQueue() {
 
   return {
     queue,
-    isLoading,
+    isLoading: isLoading || isCallingNext,
     error,
     addToQueue,
     removeFromQueue,
