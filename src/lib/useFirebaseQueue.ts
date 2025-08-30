@@ -323,12 +323,9 @@ export function useFirebaseQueue() {
   );
 
   // Função para executar quando chegar EXATAMENTE na posição configurada
-  const executeAlmostThereFunction = useCallback(async (person: QueueItem) => {
+  const executeAlmostThereFunction = useCallback(async (person: QueueItem, config: any) => {
     try {
       // Buscar configuração atual
-      const configResponse = await fetch("/api/config");
-      const config = await configResponse.json();
-
       if (!config.whatsAppEnabled) {
         return;
       }
@@ -433,12 +430,8 @@ export function useFirebaseQueue() {
 
   // Função para verificar e executar notificações
   const checkAndExecuteNotifications = useCallback(
-    async (doc: any, personData: any, position: number) => {
+    async (doc: any, personData: any, position: number, config: any) => {
       try {
-        // Buscar configuração para verificar se deve enviar WhatsApp
-        const configResponse = await fetch("/api/config");
-        const config = await configResponse.json();
-
         // Verificar se deve executar função "quase lá" - APENAS quando chegar EXATAMENTE na posição configurada
         if (
           position === config.almostTherePosition &&
@@ -448,7 +441,7 @@ export function useFirebaseQueue() {
             id: doc.id,
             ...personData,
             position: position, // Usar a nova posição
-          } as QueueItem);
+          } as QueueItem, config);
         }
 
         // REMOVIDO: Não enviar WhatsApp quando chega na posição 1
@@ -469,6 +462,11 @@ export function useFirebaseQueue() {
       try {
         const batch = writeBatch(db);
 
+        // Otimização: Buscar configuração uma única vez
+        const configResponse = await fetch("/api/config");
+        const config = await configResponse.json();
+
+
         // Buscar todas as pessoas da fila com status "waiting" ordenadas por criação
         const queueQuery = query(
           collection(db, COLLECTIONS.QUEUE),
@@ -481,6 +479,8 @@ export function useFirebaseQueue() {
         let position = 1;
         let newPosition: number | undefined;
 
+        const notificationsToSend: Promise<void>[] = [];
+
         for (const doc of querySnapshot.docs) {
           const personData = doc.data();
           const currentPosition = personData.position || 1; // Default para 1, não 0
@@ -489,8 +489,10 @@ export function useFirebaseQueue() {
           if (currentPosition !== position) {
             batch.update(doc.ref, { position });
 
-            // Verificar e executar notificações apenas se mudou
-            await checkAndExecuteNotifications(doc, personData, position);
+            // Adicionar notificação à lista para ser executada em paralelo
+            notificationsToSend.push(
+              checkAndExecuteNotifications(doc, personData, position, config)
+            );
           }
 
           // Guardar a posição da pessoa que estamos atualizando
@@ -502,6 +504,10 @@ export function useFirebaseQueue() {
         }
 
         await batch.commit();
+
+        // Executar todas as notificações em paralelo após a atualização do banco
+        await Promise.all(notificationsToSend);
+
         return newPosition;
       } catch (error) {
         console.error("Erro ao atualizar posições:", error);
