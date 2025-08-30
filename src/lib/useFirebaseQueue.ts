@@ -72,8 +72,18 @@ export function useFirebaseQueue() {
             if (sameQueueDoc) {
               const sameQueueData = sameQueueDoc.data();
 
+              const sameQueueDataWaiting = existingDocs.docs.sort(
+                (a, b) => a.data().createdAt - b.data().createdAt
+              );
+
+              const lastQueueData =
+                sameQueueDataWaiting[sameQueueDataWaiting.length - 1].data();
+
               // Se está na mesma fila com status "waiting", permitir recuperar o status
-              if (sameQueueData.status === "waiting") {
+              if (
+                lastQueueData?.status === "waiting" &&
+                lastQueueData.queueType === queueType
+              ) {
                 return {
                   canJoin: false,
                   reason: "Você já está nesta fila! Aguarde sua vez.",
@@ -86,7 +96,10 @@ export function useFirebaseQueue() {
               }
 
               // Se está na mesma fila com status "called", SEMPRE verificar na calledPeople
-              if (sameQueueData.status === "called") {
+              if (
+                lastQueueData.status === "called" &&
+                lastQueueData.queueType === queueType
+              ) {
                 // SEMPRE verificar na coleção calledPeople para esta fila
                 const calledPeopleQuery = query(
                   collection(db, COLLECTIONS.CALLED_PEOPLE),
@@ -98,10 +111,36 @@ export function useFirebaseQueue() {
                 const calledPeopleDocs = await getDocs(calledPeopleQuery);
 
                 if (!calledPeopleDocs.empty) {
-                  // Verificar se tem status específico ou se foi chamado sem status
-                  const calledPeopleData = calledPeopleDocs.docs[0].data();
-                  const calledStatus = calledPeopleData.status || "sem-status";
-                  const calledAt = calledPeopleData.calledAt;
+                  // Primeiro: procurar por documento SEM status
+                  const docWithoutStatus = calledPeopleDocs.docs.find((doc) => {
+                    const data = doc.data();
+                    return !data.status || data.status === "sem-status";
+                  });
+
+                  let calledPeopleData;
+                  let calledStatus;
+                  let calledAt;
+
+                  if (docWithoutStatus) {
+                    // Se encontrou documento sem status, usar ele
+                    calledPeopleData = docWithoutStatus.data();
+                    calledStatus = calledPeopleData.status || "sem-status";
+                    calledAt = calledPeopleData.calledAt;
+                  } else {
+                    // Se não encontrou sem status, pegar o mais recente pelo calledAt
+                    // Ordenar por calledAt para pegar o mais recente
+                    const sortedDocs = calledPeopleDocs.docs.sort((a, b) => {
+                      const aTime =
+                        a.data().calledAt?.toDate?.()?.getTime() || 0;
+                      const bTime =
+                        b.data().calledAt?.toDate?.()?.getTime() || 0;
+                      return bTime - aTime; // Descending (mais recente primeiro)
+                    });
+
+                    calledPeopleData = sortedDocs[0].data();
+                    calledStatus = calledPeopleData.status || "sem-status";
+                    calledAt = calledPeopleData.calledAt;
+                  }
 
                   // Se foi chamado recentemente (menos de 15 minutos), não permitir
                   if (calledAt && calledStatus !== "sem-status") {
@@ -115,15 +154,28 @@ export function useFirebaseQueue() {
                       return {
                         canJoin: false,
                         reason:
-                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                          "Você já foi chamado nesta fila! Aguarde alguns minutos e tente novamente!",
                         existingQueues,
                         isAlreadyCalled: true,
                       };
                     } else {
                       // Já passou 15 minutos, pode entrar novamente
+                      if (
+                        lastQueueData.status === "waiting" &&
+                        lastQueueData.queueType === queueType
+                      ) {
+                        return {
+                          canJoin: false,
+                          reason: "Você já está nesta fila! Aguarde sua vez.",
+                          existingQueues,
+                          currentPosition: lastQueueData.position,
+                          currentQueueType: queueType,
+                          isAlreadyWaiting: true,
+                        };
+                      }
+                      // insere ele na fila com status waiting
                       return {
-                        canJoin: false,
-                        calling: true,
+                        canJoin: true,
                         existingQueues,
                       };
                     }
@@ -142,30 +194,37 @@ export function useFirebaseQueue() {
                       return {
                         canJoin: false,
                         reason:
-                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                          "Você já foi chamado nesta fila! Aguarde alguns minutos e tente novamente!",
                         existingQueues,
                         isAlreadyCalled: true,
                       };
                     }
                   }
+                } else {
+                  console.log(
+                    `⚠️ Nenhum registro encontrado no calledPeople para fila ${queueType}`
+                  );
                 }
               }
             }
           }
 
-                    // Se tem status "called" em qualquer fila, verificar se a fila específica está bloqueada
+          // Se tem status "called" em qualquer fila, verificar se a fila específica está bloqueada
           if (hasCalledStatus) {
             // Verificar se a fila específica que o usuário quer entrar está bloqueada
-            const specificQueueDoc = existingDocs.docs.find((doc) => {
-              const data = doc.data();
-              return data.queueType === queueType && data.status === "called";
-            });
+            const specificQueueDoc = existingDocs.docs
+              .filter((doc) => {
+                const data = doc.data();
+                return data.queueType === queueType && data.status === "called";
+              })
+              .sort((a, b) => a.data().createdAt - b.data().createdAt);
 
             if (specificQueueDoc) {
-              const specificQueueData = specificQueueDoc.data();
-              
+              const specificQueueData =
+                specificQueueDoc[specificQueueDoc.length - 1].data();
+
               if (specificQueueData.calledAt) {
-                const calledTime = specificQueueData.calledAt.toDate();
+                const calledTime = specificQueueData?.calledAt?.toDate();
                 const currentTime = new Date();
                 const timeDifference =
                   currentTime.getTime() - calledTime.getTime();
@@ -175,7 +234,7 @@ export function useFirebaseQueue() {
                   return {
                     canJoin: false,
                     reason:
-                      "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                      "Você já foi chamado nesta fila! Aguarde alguns minutos e tente novamente!",
                     existingQueues,
                     isAlreadyCalled: true,
                   };
@@ -186,37 +245,41 @@ export function useFirebaseQueue() {
                   collection(db, COLLECTIONS.CALLED_PEOPLE),
                   where("name", "==", user.name),
                   where("phone", "==", user.phone),
-                  where("queueType", "==", queueType)
+                  where("queueType", "==", queueType),
+                  orderBy("calledAt", "desc")
                 );
-                
+
                 const calledPeopleDocs = await getDocs(calledPeopleQuery);
-                
+
                 if (!calledPeopleDocs.empty) {
                   const calledPeopleData = calledPeopleDocs.docs[0].data();
                   const calledStatus = calledPeopleData.status || "sem-status";
                   const calledAt = calledPeopleData.calledAt;
-                  
+
                   if (calledAt && calledStatus !== "sem-status") {
                     const calledTime = calledAt.toDate();
                     const currentTime = new Date();
                     const timeDifference =
                       currentTime.getTime() - calledTime.getTime();
                     const fifteenMinutesInMs = 15 * 60 * 1000;
-                    
+
                     if (timeDifference < fifteenMinutesInMs) {
                       return {
                         canJoin: false,
                         reason:
-                          "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                          "Você já foi chamado nesta fila! Aguarde alguns minutos e tente novamente!",
                         existingQueues,
                         isAlreadyCalled: true,
                       };
                     }
-                  } else if (calledStatus !== "no-show" && calledStatus !== "sem-status") {
+                  } else if (
+                    calledStatus !== "no-show" &&
+                    calledStatus !== "sem-status"
+                  ) {
                     return {
                       canJoin: false,
                       reason:
-                        "Você já foi chamado nesta fila! Não pode entrar novamente.",
+                        "Você já foi chamado nesta fila! Aguarde alguns minutos e tente novamente!",
                       existingQueues,
                       isAlreadyCalled: true,
                     };
@@ -228,46 +291,23 @@ export function useFirebaseQueue() {
 
           // Se está em outra fila com status "waiting", verificar se pode entrar em outra fila
           if (hasWaitingStatus) {
-            // Verificar se o usuário já está em uma fila com status "waiting" sem registro na calledPeople
+            // SEMPRE BLOQUEAR se estiver em qualquer fila com status "waiting"
             const waitingQueueDoc = existingDocs.docs.find((doc) => {
               const data = doc.data();
               return data.status === "waiting";
             });
-            
+
             if (waitingQueueDoc) {
               const waitingQueueData = waitingQueueDoc.data();
-              
-              // Verificar se tem registro na calledPeople para esta fila
-              const calledPeopleQuery = query(
-                collection(db, COLLECTIONS.CALLED_PEOPLE),
-                where("name", "==", user.name),
-                where("phone", "==", user.phone),
-                where("queueType", "==", waitingQueueData.queueType)
-              );
-              
-              const calledPeopleDocs = await getDocs(calledPeopleQuery);
-              
-              if (calledPeopleDocs.empty) {
-                return {
-                  canJoin: false,
-                  reason: "Você já está aguardando em uma fila. Não pode entrar em outra fila ao mesmo tempo.",
-                  existingQueues,
-                  isAlreadyWaiting: true,
-                  currentPosition: waitingQueueData.position || 1,
-                  currentQueueType: waitingQueueData.queueType,
-                };
-              } else {
-                return {
-                  canJoin: true,
-                  existingQueues,
-                  message: "Você está em outra fila, mas pode entrar nesta também.",
-                };
-              }
-            } else {
+
               return {
-                canJoin: true,
+                canJoin: false,
+                reason:
+                  "Você já está aguardando em uma fila. Não pode entrar em outra fila ao mesmo tempo. Aguarde sua vez na fila atual.",
                 existingQueues,
-                message: "Você está em outra fila, mas pode entrar nesta também.",
+                isAlreadyWaiting: true,
+                currentPosition: waitingQueueData.position || 1,
+                currentQueueType: waitingQueueData.queueType,
               };
             }
           }
@@ -285,26 +325,17 @@ export function useFirebaseQueue() {
   // Função para executar quando chegar EXATAMENTE na posição configurada
   const executeAlmostThereFunction = useCallback(async (person: QueueItem) => {
     try {
-      console.log(
-        `📱 EXECUTANDO "QUASE LÁ" para ${person.name} na posição ${person.position}`
-      );
-
       // Buscar configuração atual
       const configResponse = await fetch("/api/config");
       const config = await configResponse.json();
 
-      console.log(
-        `⚙️ WhatsApp habilitado: ${config.whatsAppEnabled}, Posição configurada: ${config.almostTherePosition}`
-      );
-
       if (!config.whatsAppEnabled) {
-        console.log(`❌ WhatsApp desabilitado - não enviando`);
         return;
       }
 
       // Adicionar delay antes de enviar a mensagem "almost-there"
       // Isso garante que chegue depois do welcome
-      await new Promise(resolve => setTimeout(resolve, 5000)); // 5 segundos de delay
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // 5 segundos de delay
 
       // Chamar API do Next.js para enviar WhatsApp
       const response = await fetch("/api/whatsapp", {
