@@ -203,6 +203,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
             href="/select-queue"
             text="Voltar à seleção"
             className="mt-4 text-white"
+            color="black"
           />
         </StatusCard>
       </div>
