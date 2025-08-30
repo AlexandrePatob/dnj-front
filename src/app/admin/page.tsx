@@ -113,26 +113,18 @@ export default function AdminPage() {
 
   // Componente para renderizar uma fila
   const QueueContent = ({
-    queueType,
     queue,
-    title,
-    icon: Icon,
     colorClass,
-    borderClass,
     bgClass,
   }: {
-    queueType: "confissoes" | "direcao-espiritual";
     queue: QueueItem[];
-    title: string;
-    icon: any;
     colorClass: string;
-    borderClass: string;
     bgClass: string;
   }) => (
-    <div className="space-y-4">
+    <>
       {queue.length > 0 ? (
-        <div className="max-h-96 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-          {queue.map((person, index) => (
+        <div className="h-full overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+          {queue.map((person) => (
             <div
               key={`${person.name}-${person.phone}`}
               className={`flex items-center justify-between p-3 rounded-lg ${bgClass} hover:shadow-md transition-shadow duration-200`}
@@ -156,19 +148,7 @@ export default function AdminPage() {
           Ninguém na fila
         </p>
       )}
-
-      <div className="flex gap-2">
-        <Button
-          onClick={() => handleCallNext(queueType)}
-          className={`flex-1 ${colorClass} hover:opacity-90 text-white`}
-          disabled={queue.length === 0 || isLoading || !!error}
-        >
-          <Bell className="w-4 h-4 mr-2" />
-          Chamar Próximo
-          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-        </Button>
-      </div>
-    </div>
+    </>
   );
 
   // Se não estiver autenticado, mostrar tela de login
@@ -406,15 +386,22 @@ export default function AdminPage() {
                           <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                         </div>
                       </CardDescription>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => handleCallNext("confissoes")}
+                          className="flex-1 bg-christblue hover:opacity-90 text-white"
+                          disabled={confissoesQueue.length === 0 || isLoading || !!error}
+                        >
+                          <Bell className="w-4 h-4 mr-2" />
+                          Chamar Próximo
+                          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-hidden">
                       <QueueContent
-                        queueType="confissoes"
                         queue={confissoesQueue}
-                        title="Confissões"
-                        icon={Heart}
                         colorClass="bg-christblue"
-                        borderClass="border-christblue"
                         bgClass="bg-christblue-light/50"
                       />
                     </CardContent>
@@ -458,15 +445,22 @@ export default function AdminPage() {
                           <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                         </div>
                       </CardDescription>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => handleCallNext("direcao-espiritual")}
+                          className="flex-1 bg-christgreen hover:opacity-90 text-white"
+                          disabled={direcaoEspiritualQueue.length === 0 || isLoading || !!error}
+                        >
+                          <Bell className="w-4 h-4 mr-2" />
+                          Chamar Próximo
+                          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-hidden">
                       <QueueContent
-                        queueType="direcao-espiritual"
                         queue={direcaoEspiritualQueue}
-                        title="Direção Espiritual"
-                        icon={Users}
                         colorClass="bg-christgreen"
-                        borderClass="border-christgreen"
                         bgClass="bg-christgreen-light/50"
                       />
                     </CardContent>
@@ -493,15 +487,22 @@ export default function AdminPage() {
                     <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                   </div>
                 </CardDescription>
+                 <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleCallNext("confissoes")}
+                    className="flex-1 bg-christblue hover:opacity-90 text-white"
+                    disabled={confissoesQueue.length === 0 || isLoading || !!error}
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Chamar Próximo
+                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden">
                 <QueueContent
-                  queueType="confissoes"
                   queue={confissoesQueue}
-                  title="Confissões"
-                  icon={Heart}
                   colorClass="bg-christblue"
-                  borderClass="border-christblue"
                   bgClass="bg-christblue-light/50"
                 />
               </CardContent>
@@ -522,15 +523,22 @@ export default function AdminPage() {
                     <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                   </div>
                 </CardDescription>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleCallNext("direcao-espiritual")}
+                    className="flex-1 bg-christgreen hover:opacity-90 text-white"
+                    disabled={direcaoEspiritualQueue.length === 0 || isLoading || !!error}
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Chamar Próximo
+                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden">
                 <QueueContent
-                  queueType="direcao-espiritual"
                   queue={direcaoEspiritualQueue}
-                  title="Direção Espiritual"
-                  icon={Users}
                   colorClass="bg-christgreen"
-                  borderClass="border-christgreen"
                   bgClass="bg-christgreen-light/50"
                 />
               </CardContent>
