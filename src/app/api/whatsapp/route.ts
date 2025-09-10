@@ -46,10 +46,15 @@ async function sendWhatsAppNotification(
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to send WhatsApp notification: ${response.status}`);
+      throw new Error(
+        `Failed to send WhatsApp notification: ${response.status}`
+      );
     }
 
-    return { success: true, message: "WhatsApp notification sent successfully" };
+    return {
+      success: true,
+      message: "WhatsApp notification sent successfully",
+    };
   } catch (error) {
     console.error("Error sending WhatsApp notification:", error);
     throw error;
@@ -78,13 +83,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validação da posição para tipos que precisam
-    if (
-      (type === "almost-there" || type === "welcome") &&
-      position === undefined
-    ) {
+    if (type === "almost-there" && position === undefined) {
       return NextResponse.json(
         {
-          error: 'Position is required for "almost-there" and "welcome" types',
+          error: 'Position is required for "almost-there" type',
         },
         { status: 400 }
       );
@@ -100,7 +102,9 @@ export async function POST(request: NextRequest) {
     );
 
     // Log simples da execução
-    console.log(`📱 WhatsApp: ${type} for ${name} (${phone}) in ${queueType} queue`);
+    console.log(
+      `📱 WhatsApp: ${type} for ${name} (${phone}) in ${queueType} queue`
+    );
 
     return NextResponse.json(result);
   } catch (error) {
