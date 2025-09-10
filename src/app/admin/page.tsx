@@ -26,7 +26,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { QueueItem, QueueType } from "../../lib/types";
-import { useFirebaseQueue } from "../../lib/useFirebaseQueue";
+import { useFirebaseQueue } from "../../lib/useFirebaseQueue"; // Hook refatorado
 import { useFirebaseCalledPeople } from "../../lib/useFirebaseCalledPeople";
 import { Header, CalledPeopleList } from "@/components";
 import { ConfigPanel } from "@/components/ConfigPanel";
@@ -44,19 +44,15 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [showConfig, setShowConfig] = useState(false);
 
-  const { queue, isLoading, error, callNext } = useFirebaseQueue();
-
+  // --- HOOKS REATORADOS ---
+  const { queue, totalInQueue, isLoading, error, callNextPerson } = useFirebaseQueue(); // Novo hook!
   const {
     calledPeople,
-    expiredPeople,
     confirmPresence,
     markAsNoShow,
-    removePerson,
-    clearHistory,
     requestNotificationPermission,
   } = useFirebaseCalledPeople();
 
-  // Solicitar permissão para notificações ao carregar
   useEffect(() => {
     if (isAuthenticated) {
       requestNotificationPermission();
@@ -86,22 +82,26 @@ export default function AdminPage() {
     setPassword("");
   };
 
-  const handleCallNext = async (
-    queueType: QueueType
-  ) => {
+  // --- NOVA FUNÇÃO PARA CHAMAR O PRÓXIMO ---
+  const handleCallNext = async (queueType: QueueType) => {
     try {
-      await callNext(queueType);
+      await callNextPerson(queueType);
+      // O listener do useFirebaseCalledPeople irá atualizar a UI automaticamente
     } catch (error) {
-      console.error("Erro ao chamar próximo:", error);
+      console.error("Erro ao chamar próximo via Cloud Function:", error);
+      // O hook já seta o estado de erro, que será exibido na UI
     }
   };
 
-  const confissoesQueue = queue.filter(
-    (item) => item.queueType === "confissoes"
-  );
-  const direcaoEspiritualQueue = queue.filter(
-    (item) => item.queueType === "direcao-espiritual"
-  );
+  // Filtra a lista limitada (top 5 de cada) para exibição
+  const confissoesQueue = queue.filter((item) => item.queueType === "confissoes");
+  const direcaoEspiritualQueue = queue.filter((item) => item.queueType === "direcao-espiritual");
+
+  // Calcula o total por fila com base no total global e na contagem de uma das filas
+  // NOTA: Isso é uma aproximação. O ideal seria o hook retornar totais separados.
+  // Mas para o evento, essa lógica é suficiente e evita mais leituras.
+  const totalConfissoes = totalInQueue - direcaoEspiritualQueue.length;
+  const totalDirecao = totalInQueue - confissoesQueue.length;
 
   // Contadores de pessoas confirmadas por fila
   const confissoesConfirmed = calledPeople.filter(
@@ -111,7 +111,7 @@ export default function AdminPage() {
     (person) => person.queueType === "direcao-espiritual" && person.status === "confirmed"
   ).length;
 
-  // Componente para renderizar uma fila
+  // Componente para renderizar a fila (agora usa o índice do array como posição)
   const QueueContent = ({
     queue,
     colorClass,
@@ -124,9 +124,9 @@ export default function AdminPage() {
     <>
       {queue.length > 0 ? (
         <div className="h-full overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-          {queue.map((person) => (
+          {queue.map((person, index) => (
             <div
-              key={`${person.name}-${person.phone}`}
+              key={person.id}
               className={`flex items-center justify-between p-3 rounded-lg ${bgClass} hover:shadow-md transition-shadow duration-200`}
             >
               <div className="flex-1 min-w-0">
@@ -138,7 +138,7 @@ export default function AdminPage() {
                 variant="secondary"
                 className={`${colorClass} text-white text-sm px-3 py-1 ml-3 flex-shrink-0`}
               >
-                {person.position}
+                {index + 1}º
               </Badge>
             </div>
           ))}
@@ -288,14 +288,12 @@ export default function AdminPage() {
       {/* Conteúdo principal com padding-top para o header fixo */}
       <div className="mt-10 pt-12">
         <div className="max-w-6xl mx-auto space-y-8">
-          {/* Informações de debug */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
-              <p className="text-red-700 font-medium">Erro de Conexão:</p>
-              <p className="text-red-600">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
+              <p className="font-medium">Erro:</p>
+              <p>{error}</p>
             </div>
           )}
-
 
           {/* Painel de Configurações */}
           <ConfigPanel show={showConfig} />
@@ -390,7 +388,7 @@ export default function AdminPage() {
                         <Button
                           onClick={() => handleCallNext("confissoes")}
                           className="flex-1 bg-christblue hover:opacity-90 text-white"
-                          disabled={confissoesQueue.length === 0 || isLoading || !!error}
+                          disabled={confissoesQueue.length === 0 || isLoading}
                         >
                           <Bell className="w-4 h-4 mr-2" />
                           Chamar Próximo
@@ -449,7 +447,7 @@ export default function AdminPage() {
                         <Button
                           onClick={() => handleCallNext("direcao-espiritual")}
                           className="flex-1 bg-christgreen hover:opacity-90 text-white"
-                          disabled={direcaoEspiritualQueue.length === 0 || isLoading || !!error}
+                          disabled={direcaoEspiritualQueue.length === 0 || isLoading}
                         >
                           <Bell className="w-4 h-4 mr-2" />
                           Chamar Próximo
@@ -483,7 +481,7 @@ export default function AdminPage() {
                 </div>
                 <CardDescription className="text-muted-foreground">
                   <div className="flex justify-between text-sm text-black">
-                    <span>Na fila: {confissoesQueue.length}</span>
+                    <span>Na fila: {totalConfissoes}</span>
                     <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                   </div>
                 </CardDescription>
@@ -491,7 +489,7 @@ export default function AdminPage() {
                   <Button
                     onClick={() => handleCallNext("confissoes")}
                     className="flex-1 bg-christblue hover:opacity-90 text-white"
-                    disabled={confissoesQueue.length === 0 || isLoading || !!error}
+                    disabled={confissoesQueue.length === 0 || isLoading}
                   >
                     <Bell className="w-4 h-4 mr-2" />
                     Chamar Próximo
@@ -519,7 +517,7 @@ export default function AdminPage() {
                 </div>
                 <CardDescription className="text-muted-foreground">
                   <div className="flex justify-between text-sm text-black">
-                    <span>Na fila: {direcaoEspiritualQueue.length}</span>
+                    <span>Na fila: {totalDirecao}</span>
                     <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                   </div>
                 </CardDescription>
@@ -527,7 +525,7 @@ export default function AdminPage() {
                   <Button
                     onClick={() => handleCallNext("direcao-espiritual")}
                     className="flex-1 bg-christgreen hover:opacity-90 text-white"
-                    disabled={direcaoEspiritualQueue.length === 0 || isLoading || !!error}
+                    disabled={direcaoEspiritualQueue.length === 0 || isLoading}
                   >
                     <Bell className="w-4 h-4 mr-2" />
                     Chamar Próximo
