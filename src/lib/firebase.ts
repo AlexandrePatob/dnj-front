@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 
 // Inicializar Firestore
 export const db = getFirestore(app);
@@ -26,5 +26,6 @@ export const db = getFirestore(app);
 //   }
 // }
 
-export default app;
+// Removendo a exportação padrão para usar apenas exportações nomeadas
+// export default app;
 
