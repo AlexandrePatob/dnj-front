@@ -42,6 +42,7 @@ export const callNextPerson = onCall({ region: "southamerica-east1" }, async (re
       transaction.set(calledPersonRef, {
         ...nextPersonData,
         calledAt: FieldValue.serverTimestamp(),
+        status: 'waiting',
       });
 
       // --- DISPARAR NOTIFICAÇÃO DO WHATSAPP ---
