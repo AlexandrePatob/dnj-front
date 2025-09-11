@@ -42,7 +42,7 @@ export function useFirebaseQueue() {
       setIsLoading(true);
       setError(null);
       const result = await joinQueueCallable({ user, queueType });
-      return result.data as { status: string; message: string; docId: string };
+      return result.data as { status: string; message: string; docId: string; calledAt?: any };
     } catch (err: any) {
       console.error("Erro ao chamar joinQueue:", err);
       setError(err.message || "Erro ao entrar na fila.");

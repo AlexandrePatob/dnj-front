@@ -7,8 +7,12 @@ import {
   onSnapshot, 
   query, 
   orderBy,
+  where,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  limit,
+  getDocs,
+  getCountFromServer
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { CalledPerson } from './types';
@@ -16,18 +20,30 @@ import { CalledPerson } from './types';
 const COLLECTION_NAME = 'calledPeople';
 const TIMER_DURATION = 5 * 60 * 1000; // 5 minutos
 
+interface CallCounters {
+  confissoesConfirmed: number;
+  direcaoEspiritualConfirmed: number;
+}
+
 export function useFirebaseCalledPeople() {
   const [calledPeople, setCalledPeople] = useState<CalledPerson[]>([]);
-  const [expiredPeople, setExpiredPeople] = useState<CalledPerson[]>([]);
+  const [counters, setCounters] = useState<CallCounters>({
+    confissoesConfirmed: 0,
+    direcaoEspiritualConfirmed: 0
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Listener em tempo real para pessoas chamadas
+  // Listener OTIMIZADO - apenas pessoas aguardando ação (status = 'waiting')
   useEffect(() => {
+    // TEMPORÁRIO: Query simples até criar o índice
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('status', '==', 'waiting') // SÓ pessoas que precisam de ação!
+      // orderBy removido temporariamente para não precisar de índice
+    );
+
     const unsubscribe = onSnapshot(
-      query(
-        collection(db, COLLECTION_NAME),
-        orderBy('calledAt', 'desc')
-      ),
+      q,
       (snapshot) => {
         const calledData: CalledPerson[] = [];
         snapshot.forEach((doc) => {
@@ -94,6 +110,44 @@ export function useFirebaseCalledPeople() {
     return () => clearInterval(interval);
   }, [calledPeople]);
 
+  // Buscar contadores de estatísticas via count queries (MUITO mais eficiente)
+  useEffect(() => {
+    const fetchCounters = async () => {
+      try {
+        const queries = [
+          // Apenas confirmados por fila (o que realmente importa)
+          getCountFromServer(query(
+            collection(db, COLLECTION_NAME), 
+            where('queueType', '==', 'confissoes'), 
+            where('status', '==', 'confirmed')
+          )),
+          getCountFromServer(query(
+            collection(db, COLLECTION_NAME), 
+            where('queueType', '==', 'direcao-espiritual'), 
+            where('status', '==', 'confirmed')
+          ))
+        ];
+
+        const results = await Promise.all(queries);
+        
+        setCounters({
+          confissoesConfirmed: results[0].data().count,
+          direcaoEspiritualConfirmed: results[1].data().count
+        });
+      } catch (error) {
+        console.error('Erro ao buscar contadores:', error);
+      }
+    };
+
+    // Buscar contadores inicialmente
+    fetchCounters();
+    
+    // Atualizar contadores a cada 60 segundos
+    const interval = setInterval(fetchCounters, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Confirmar presença
   const confirmPresence = useCallback(async (id: string) => {
     try {
@@ -133,14 +187,16 @@ export function useFirebaseCalledPeople() {
   const clearHistory = useCallback(async () => {
     try {
       const batch = writeBatch(db);
-      calledPeople.forEach(person => {
-        batch.delete(doc(db, COLLECTION_NAME, person.id));
+      // Pega todos os documentos para deletar
+      const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
       });
       await batch.commit();
     } catch (error) {
       console.error('Erro ao limpar histórico:', error);
     }
-  }, [calledPeople]);
+  }, []);
 
   // Solicitar permissão para notificações
   const requestNotificationPermission = useCallback(async () => {
@@ -152,8 +208,8 @@ export function useFirebaseCalledPeople() {
   }, []);
 
   return {
-    calledPeople,
-    expiredPeople,
+    calledPeople, // Apenas pessoas aguardando ação (status = 'waiting')
+    counters, // Estatísticas via count queries
     isLoading,
     confirmPresence,
     markAsNoShow,
