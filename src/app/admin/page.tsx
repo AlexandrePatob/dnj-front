@@ -283,7 +283,7 @@ export default function AdminPage() {
       </div>
 
       {/* Conteúdo principal com padding-top para o header fixo */}
-      <div className="mt-10 pt-12">
+      <div className="m-2 mt-10 pt-12">
         <div className="max-w-6xl mx-auto space-y-8">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
@@ -303,6 +303,9 @@ export default function AdminPage() {
               onConfirm={(id: string) => confirmPresence(id)}
               onNoShow={(id: string) => markAsNoShow(id)}
               onRemove={(id: string) => {}} // Não usado mais
+              onCallNext={() => handleCallNext("confissoes")}
+              isLoading={isLoading}
+              queueLength={confissoesQueue.length}
             />
             <CalledPeopleList
               calledPeople={calledPeople}
@@ -310,6 +313,9 @@ export default function AdminPage() {
               onConfirm={(id: string) => confirmPresence(id)}
               onNoShow={(id: string) => markAsNoShow(id)}
               onRemove={(id: string) => {}} // Não usado mais
+              onCallNext={() => handleCallNext("direcao-espiritual")}
+              isLoading={isLoading}
+              queueLength={direcaoEspiritualQueue.length}
             />
           </div>
 
@@ -319,7 +325,7 @@ export default function AdminPage() {
               <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1 rounded-lg">
                 <TabsTrigger
                   value="confissoes"
-                  className="flex items-center space-x-2 data-[state=active]:bg-christblue data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+                  className="flex items-center space-x-2 data-[state=active]:bg-christblue data-[state=active]:text-white text-black data-[state=active]:shadow-md transition-all duration-200 rounded-md"
                 >
                   <Heart className="w-4 h-4" />
                   <span>Confissões</span>
@@ -332,7 +338,7 @@ export default function AdminPage() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="direcao-espiritual"
-                  className="flex items-center space-x-2 data-[state=active]:bg-christgreen data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200 rounded-md"
+                  className="flex items-center space-x-2 data-[state=active]:bg-christgreen data-[state=active]:text-white text-black data-[state=active]:shadow-md transition-all duration-200 rounded-md"
                 >
                   <Users className="w-4 h-4" />
                   <span>Direção Espiritual</span>
@@ -358,6 +364,9 @@ export default function AdminPage() {
                     onConfirm={(id: string) => confirmPresence(id)}
                     onNoShow={(id: string) => markAsNoShow(id)}
                     onRemove={(id: string) => {}} // Não usado mais
+                    onCallNext={() => handleCallNext("confissoes")}
+                    isLoading={isLoading}
+                    queueLength={confissoesQueue.length}
                   />
                 </div>
 
@@ -381,17 +390,7 @@ export default function AdminPage() {
                           <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                         </div>
                       </CardDescription>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          onClick={() => handleCallNext("confissoes")}
-                          className="flex-1 bg-christblue hover:opacity-90 text-white"
-                          disabled={confissoesQueue.length === 0 || isLoading}
-                        >
-                          <Bell className="w-4 h-4 mr-2" />
-                          Chamar Próximo
-                          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-                        </Button>
-                      </div>
+                      {/* Botão movido para a seção "Chamados" */}
                     </CardHeader>
                     <CardContent className="flex-1 overflow-hidden">
                       <QueueContent
@@ -417,6 +416,9 @@ export default function AdminPage() {
                     onConfirm={(id: string) => confirmPresence(id)}
                     onNoShow={(id: string) => markAsNoShow(id)}
                     onRemove={(id: string) => {}} // Não usado mais
+                    onCallNext={() => handleCallNext("direcao-espiritual")}
+                    isLoading={isLoading}
+                    queueLength={direcaoEspiritualQueue.length}
                   />
                 </div>
 
@@ -440,17 +442,7 @@ export default function AdminPage() {
                           <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                         </div>
                       </CardDescription>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          onClick={() => handleCallNext("direcao-espiritual")}
-                          className="flex-1 bg-christgreen hover:opacity-90 text-white"
-                          disabled={direcaoEspiritualQueue.length === 0 || isLoading}
-                        >
-                          <Bell className="w-4 h-4 mr-2" />
-                          Chamar Próximo
-                          {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-                        </Button>
-                      </div>
+                      {/* Botão movido para a seção "Chamados" */}
                     </CardHeader>
                     <CardContent className="flex-1 overflow-hidden">
                       <QueueContent
@@ -482,17 +474,7 @@ export default function AdminPage() {
                     <span className="text-green-600 font-medium">Atendidos: {confissoesConfirmed}</span>
                   </div>
                 </CardDescription>
-                 <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => handleCallNext("confissoes")}
-                    className="flex-1 bg-christblue hover:opacity-90 text-white"
-                    disabled={confissoesQueue.length === 0 || isLoading}
-                  >
-                    <Bell className="w-4 h-4 mr-2" />
-                    Chamar Próximo
-                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-                  </Button>
-                </div>
+                {/* Botão movido para a seção "Chamados" */}
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden">
                 <QueueContent
@@ -518,17 +500,7 @@ export default function AdminPage() {
                     <span className="text-green-600 font-medium">Atendidos: {direcaoEspiritualConfirmed}</span>
                   </div>
                 </CardDescription>
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => handleCallNext("direcao-espiritual")}
-                    className="flex-1 bg-christgreen hover:opacity-90 text-white"
-                    disabled={direcaoEspiritualQueue.length === 0 || isLoading}
-                  >
-                    <Bell className="w-4 h-4 mr-2" />
-                    Chamar Próximo
-                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
-                  </Button>
-                </div>
+                {/* Botão movido para a seção "Chamados" */}
               </CardHeader>
               <CardContent className="flex-1 overflow-hidden">
                 <QueueContent

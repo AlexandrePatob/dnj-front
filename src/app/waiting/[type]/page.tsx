@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useFirebaseQueue } from "../../../lib/useFirebaseQueue";
@@ -18,7 +18,7 @@ import {
   FloatingPositionHeader,
 } from "../../../components";
 
-type QueueStatus = "joining" | "joined" | "error";
+type QueueStatus = "joining" | "joined" | "error" | "called";
 
 export default function WaitingPage({ params }: { params: { type: string } }) {
   const queueType = params.type as QueueType;
@@ -36,9 +36,26 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   
   // Estado para saber se o usuário foi chamado
   const [isCalled, setIsCalled] = useState(false);
-
+ 
   // Armazena o ID do documento do usuário na fila para polling e listening
   const userDocIdRef = useRef<string | null>(null);
+  // Refs para encerrar imediatamente listeners e polling
+  const queueUnsubscribeRef = useRef<null | (() => void)>(null);
+  const pollingIntervalRef = useRef<null | number>(null);
+
+  // Função utilitária para parar tudo imediatamente
+  const stopAll = useCallback(() => {
+    // Parar listener do documento da fila
+    if (queueUnsubscribeRef.current) {
+      try { queueUnsubscribeRef.current(); } catch {}
+      queueUnsubscribeRef.current = null;
+    }
+    // Parar polling
+    if (pollingIntervalRef.current !== null) {
+      try { clearInterval(pollingIntervalRef.current); } catch {}
+      pollingIntervalRef.current = null;
+    }
+  }, []);
 
   // 1. Efeito para carregar o usuário e entrar na fila (executa uma vez)
   useEffect(() => {
@@ -58,9 +75,10 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           userDocIdRef.current = result.docId;
           setStatus("joined");
         } else if (result.status === "called") {
-          // ✅ NOVO: Pessoa já foi chamada e está aguardando
+          // ✅ Pessoa já foi chamada e está aguardando
           setIsCalled(true);
-          setStatus("joined"); // Muda para joined para não mostrar loading
+          setStatus("called");
+          stopAll(); // Para qualquer coisa que esteja ativa por segurança
         } else {
           // Caso a função retorne um status de erro conhecido
           setErrorMessage(result.message || "Não foi possível entrar na fila.");
@@ -74,51 +92,71 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     };
 
     enterQueue();
-  }, [queueType, router, joinQueue]);
+  }, [queueType, router, joinQueue, stopAll]);
 
 
-  // 2. Efeito para ouvir se o usuário foi chamado (depende do docId)
+  // 2. Efeito para ouvir se o usuário foi chamado (depende do docId) - SÓ se não foi chamado
   useEffect(() => {
-    if (status !== "joined" || !userDocIdRef.current) return;
+    if (status !== "joined" || !userDocIdRef.current || isCalled) return;
 
     const userDocRef = doc(db, "queue", userDocIdRef.current);
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
       // Se o documento não existe mais, significa que fomos chamados!
       if (!doc.exists()) {
         setIsCalled(true);
-        unsubscribe(); // Para de ouvir
+        setStatus("called");
+        stopAll(); // Para imediatamente listeners/polling
       }
     });
+    // Guardar a referência do unsubscribe
+    queueUnsubscribeRef.current = unsubscribe;
 
-    return () => unsubscribe(); // Cleanup
-  }, [status]);
+    return () => {
+      try { unsubscribe(); } finally { queueUnsubscribeRef.current = null; }
+    };
+  }, [status, isCalled, stopAll]);
 
-
-  // 3. Efeito para buscar a posição periodicamente (polling)
+  // 3. Efeito para buscar a posição periodicamente (polling) - SÓ se não foi chamado
   useEffect(() => {
-    if (status !== "joined" || !userDocIdRef.current || !user) return;
+    if (status !== "joined" || !userDocIdRef.current || !user || isCalled) return;
+
+    let cancelled = false;
 
     const fetchStatus = async () => {
-      if (!userDocIdRef.current || !user) return;
+      if (!userDocIdRef.current || !user || cancelled) return;
       try {
         const result = await getUserStatus(user, queueType, userDocIdRef.current);
+        if (cancelled) return;
         if (result.status === "success") {
           setUserPosition(result.position);
           setTotalInQueue(result.totalInQueue);
         } else if (result.status === "not_found") {
           // Se não foi encontrado, provavelmente já foi chamado
           setIsCalled(true);
+          setStatus("called");
+          stopAll();
         }
       } catch (error) {
-        console.error("Erro ao buscar status da fila:", error);
+        if (!cancelled) {
+          console.error("Erro ao buscar status da fila:", error);
+        }
       }
     };
 
-    fetchStatus(); // Busca a primeira vez
-    const intervalId = setInterval(fetchStatus, 30000); // E depois a cada 30s
+    // Primeira busca e configuração do intervalo
+    fetchStatus();
+    const intervalId = window.setInterval(fetchStatus, 30000);
+    pollingIntervalRef.current = intervalId;
 
-    return () => clearInterval(intervalId); // Cleanup
-  }, [status, user, queueType, getUserStatus]);
+    // Cleanup ao mudar dependências
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      if (pollingIntervalRef.current === intervalId) {
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [status, user, queueType, getUserStatus, isCalled, stopAll]);
 
 
   // --- Renderização dos diferentes estados da UI ---
@@ -133,6 +171,21 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
 
   if (isCalled) {
     return <CalledScreen currentUser={user} />;
+  }
+
+  if (status === "called") {
+    return (
+      <div className="min-h-screen p-4 bg-[#181818] text-white">
+        <Header queueType={queueType} />
+        <StatusCard
+          icon={<CheckCircle className="w-8 h-8" />}
+          title="Você já foi chamado!"
+          description="Você já foi chamado! Dirija-se ao local de atendimento."
+          status="loading"
+          showSpinner={true}
+        />
+      </div>
+    );
   }
 
   if (status === "joining") {

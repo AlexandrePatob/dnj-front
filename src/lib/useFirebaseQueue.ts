@@ -176,14 +176,14 @@ export function useFirebaseQueue() {
       collection(db, "queue"),
       where("queueType", "==", "confissoes"),
       orderBy("createdAt", "asc"),
-      limit(100) // Aumentado para 100 para maior visibilidade do admin
+      limit(10)
     );
     // Listener para os 5 primeiros da fila de direção espiritual
     const direcaoQuery = query(
       collection(db, "queue"),
       where("queueType", "==", "direcao-espiritual"),
       orderBy("createdAt", "asc"),
-      limit(100) // Aumentado para 100 para maior visibilidade do admin
+      limit(10)
     );
 
     const unsubscribeConfissoes = onSnapshot(
