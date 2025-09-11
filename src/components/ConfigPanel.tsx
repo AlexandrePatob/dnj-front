@@ -7,6 +7,7 @@ interface QueueConfig {
   almostTherePosition: number;
   whatsAppEnabled: boolean;
   notificationDelay: number;
+  isQueueOpen?: boolean;
 }
 
 interface ConfigPanelProps {
@@ -17,7 +18,8 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
   const [config, setConfig] = useState<QueueConfig>({
     almostTherePosition: 5,
     whatsAppEnabled: true,
-    notificationDelay: 30
+    notificationDelay: 30,
+    isQueueOpen: true,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,20 +41,24 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
     }
   };
 
-  const saveConfig = async () => {
+  const saveConfig = async (newConfig?: Partial<QueueConfig>) => {
     setIsLoading(true);
     setMessage('');
     
+    const configToSave = { ...config, ...newConfig };
+
     try {
       const response = await fetch('/api/config', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(config)
+        body: JSON.stringify(configToSave)
       });
 
       if (response.ok) {
+        const data = await response.json();
+        setConfig(data); // Atualiza o estado com a config retornada pela API
         setMessage('Configuração salva com sucesso!');
         setTimeout(() => setMessage(''), 3000);
       } else {
@@ -85,6 +91,10 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
     } catch (error) {
       setMessage('Erro ao resetar configuração');
     }
+  };
+
+  const handleToggleQueueStatus = () => {
+    saveConfig({ isQueueOpen: !config.isQueueOpen });
   };
 
   // Se não estiver visível, não renderizar nada
@@ -141,6 +151,30 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
         </p>
       </div>
 
+      {/* Controle da Fila */}
+      <div className="space-y-2 pt-4 border-t border-gray-600">
+        <h3 className="text-lg font-semibold text-white">Controle da Fila</h3>
+        <p className="text-xs text-white pb-2">
+          Habilite ou desabilite a entrada de novas pessoas na fila.
+        </p>
+        <Button
+            onClick={handleToggleQueueStatus}
+            disabled={isLoading}
+            className={`w-full ${
+              config.isQueueOpen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+            } text-white`}
+          >
+            {isLoading
+              ? 'Atualizando...'
+              : config.isQueueOpen
+              ? 'Finalizar Atendimento (Fechar Fila)'
+              : 'Iniciar Atendimento (Abrir Fila)'}
+          </Button>
+          <p className="text-center text-sm text-white pt-1">
+            Status atual da fila: <strong>{config.isQueueOpen ? 'Aberta' : 'Fechada'}</strong>
+          </p>
+      </div>
+
       {/* Mensagem de Status */}
       {message && (
         <div className={`p-3 rounded-md text-sm ${
@@ -155,7 +189,7 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
       {/* Botões de Ação */}
       <div className="flex flex-wrap gap-3">
         <Button
-          onClick={saveConfig}
+          onClick={() => saveConfig()}
           disabled={isLoading}
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
         >
@@ -181,6 +215,7 @@ export function ConfigPanel({ show }: ConfigPanelProps) {
           <li>• <strong>É a Vez</strong>: Envia WhatsApp automaticamente quando é chamado!</li>
           <li>• <strong>Boas-vindas</strong>: Envia WhatsApp quando entra na fila</li>
           <li>• <strong>WhatsApp</strong>: {config.whatsAppEnabled ? '✅ Habilitado' : '❌ Desabilitado'}</li>
+          <li>• <strong>Fila</strong>: {config.isQueueOpen ? '✅ Aberta' : '❌ Fechada'}</li>
         </ul>
       </div>
     </div>

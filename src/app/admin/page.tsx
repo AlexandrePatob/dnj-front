@@ -48,6 +48,7 @@ export default function AdminPage() {
   const { queue, totalInQueue, isLoading, error, callNextPerson } = useFirebaseQueue(); // Novo hook!
   const {
     calledPeople,
+    counters,
     confirmPresence,
     markAsNoShow,
     requestNotificationPermission,
@@ -103,13 +104,9 @@ export default function AdminPage() {
   const totalConfissoes = totalInQueue - direcaoEspiritualQueue.length;
   const totalDirecao = totalInQueue - confissoesQueue.length;
 
-  // Contadores de pessoas confirmadas por fila
-  const confissoesConfirmed = calledPeople.filter(
-    (person) => person.queueType === "confissoes" && person.status === "confirmed"
-  ).length;
-  const direcaoEspiritualConfirmed = calledPeople.filter(
-    (person) => person.queueType === "direcao-espiritual" && person.status === "confirmed"
-  ).length;
+  // Usar contadores otimizados do hook (muito mais eficiente!)
+  const confissoesConfirmed = counters.confissoesConfirmed;
+  const direcaoEspiritualConfirmed = counters.direcaoEspiritualConfirmed;
 
   // Componente para renderizar a fila (agora usa o índice do array como posição)
   const QueueContent = ({
@@ -144,7 +141,7 @@ export default function AdminPage() {
           ))}
         </div>
       ) : (
-        <p className="text-center text-muted-foreground py-4 font-sans">
+        <p className="text-center text-muted-foreground py-4 font-sans text-black">
           Ninguém na fila
         </p>
       )}

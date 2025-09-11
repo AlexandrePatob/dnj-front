@@ -57,6 +57,10 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
         if (result.status === "success" && result.docId) {
           userDocIdRef.current = result.docId;
           setStatus("joined");
+        } else if (result.status === "called") {
+          // ✅ NOVO: Pessoa já foi chamada e está aguardando
+          setIsCalled(true);
+          setStatus("joined"); // Muda para joined para não mostrar loading
         } else {
           // Caso a função retorne um status de erro conhecido
           setErrorMessage(result.message || "Não foi possível entrar na fila.");
