@@ -29,14 +29,14 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<QueueStatus>("joining");
   const [errorMessage, setErrorMessage] = useState("");
-  
+
   // Novo estado para a posição e total
   const [userPosition, setUserPosition] = useState<number | null>(null);
   const [totalInQueue, setTotalInQueue] = useState<number | null>(null);
-  
+
   // Estado para saber se o usuário foi chamado
   const [isCalled, setIsCalled] = useState(false);
- 
+
   // Armazena o ID do documento do usuário na fila para polling e listening
   const userDocIdRef = useRef<string | null>(null);
   // Refs para encerrar imediatamente listeners e polling
@@ -47,15 +47,45 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   const stopAll = useCallback(() => {
     // Parar listener do documento da fila
     if (queueUnsubscribeRef.current) {
-      try { queueUnsubscribeRef.current(); } catch {}
+      try {
+        queueUnsubscribeRef.current();
+      } catch {}
       queueUnsubscribeRef.current = null;
     }
     // Parar polling
     if (pollingIntervalRef.current !== null) {
-      try { clearInterval(pollingIntervalRef.current); } catch {}
+      try {
+        clearInterval(pollingIntervalRef.current);
+      } catch {}
       pollingIntervalRef.current = null;
     }
   }, []);
+
+  // 0. Efeito para verificar a cada 30 segundos se já passou 5 minutos desde que foi chamado
+  useEffect(() => {
+    const checkIfShouldRedirect = () => {
+      const calledData = localStorage.getItem("calledData");
+      if (calledData) {
+        const { calledAt } = JSON.parse(calledData);
+        const now = Date.now();
+        const timePassed = now - calledAt;
+        const fiveMinutes = 2 * 60 * 1000; // 2 minutos em ms
+        if (timePassed >= fiveMinutes) {
+          // Já passou 5 minutos, redirecionar para agradecimento
+          router.push("/thank-you");
+          return;
+        }
+      }
+    };
+
+    // Verificar imediatamente
+    checkIfShouldRedirect();
+
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkIfShouldRedirect, 30000);
+
+    return () => clearInterval(interval);
+  }, [router]);
 
   // 1. Efeito para carregar o usuário e entrar na fila (executa uma vez)
   useEffect(() => {
@@ -76,6 +106,16 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           setStatus("joined");
         } else if (result.status === "called") {
           // ✅ Pessoa já foi chamada e está aguardando
+          // Salvar no localStorage quando foi chamado
+          const calledAt = Date.now();
+          localStorage.setItem(
+            "calledData",
+            JSON.stringify({
+              calledAt,
+              queueType,
+            })
+          );
+
           setIsCalled(true);
           setStatus("called");
           stopAll(); // Para qualquer coisa que esteja ativa por segurança
@@ -94,7 +134,6 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     enterQueue();
   }, [queueType, router, joinQueue, stopAll]);
 
-
   // 2. Efeito para ouvir se o usuário foi chamado (depende do docId) - SÓ se não foi chamado
   useEffect(() => {
     if (status !== "joined" || !userDocIdRef.current || isCalled) return;
@@ -103,6 +142,16 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     const unsubscribe = onSnapshot(userDocRef, (doc) => {
       // Se o documento não existe mais, significa que fomos chamados!
       if (!doc.exists()) {
+        // Salvar no localStorage quando foi chamado
+        const calledAt = Date.now();
+        localStorage.setItem(
+          "calledData",
+          JSON.stringify({
+            calledAt,
+            queueType,
+          })
+        );
+
         setIsCalled(true);
         setStatus("called");
         stopAll(); // Para imediatamente listeners/polling
@@ -112,26 +161,45 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
     queueUnsubscribeRef.current = unsubscribe;
 
     return () => {
-      try { unsubscribe(); } finally { queueUnsubscribeRef.current = null; }
+      try {
+        unsubscribe();
+      } finally {
+        queueUnsubscribeRef.current = null;
+      }
     };
-  }, [status, isCalled, stopAll]);
+  }, [status, isCalled, stopAll, queueType]);
 
   // 3. Efeito para buscar a posição periodicamente (polling) - SÓ se não foi chamado
   useEffect(() => {
-    if (status !== "joined" || !userDocIdRef.current || !user || isCalled) return;
+    if (status !== "joined" || !userDocIdRef.current || !user || isCalled)
+      return;
 
     let cancelled = false;
 
     const fetchStatus = async () => {
       if (!userDocIdRef.current || !user || cancelled) return;
       try {
-        const result = await getUserStatus(user, queueType, userDocIdRef.current);
+        const result = await getUserStatus(
+          user,
+          queueType,
+          userDocIdRef.current
+        );
         if (cancelled) return;
         if (result.status === "success") {
           setUserPosition(result.position);
           setTotalInQueue(result.totalInQueue);
         } else if (result.status === "not_found") {
           // Se não foi encontrado, provavelmente já foi chamado
+          // Salvar no localStorage quando foi chamado
+          const calledAt = Date.now();
+          localStorage.setItem(
+            "calledData",
+            JSON.stringify({
+              calledAt,
+              queueType,
+            })
+          );
+
           setIsCalled(true);
           setStatus("called");
           stopAll();
@@ -157,7 +225,6 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
       }
     };
   }, [status, user, queueType, getUserStatus, isCalled, stopAll]);
-
 
   // --- Renderização dos diferentes estados da UI ---
 
@@ -229,7 +296,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
   return (
     <div className="min-h-screen p-4 bg-[#181818] text-white">
       <Header queueType={queueType} />
-      
+
       <FloatingPositionHeader
         userName={user.name || ""}
         position={userPosition || 0}
@@ -243,7 +310,9 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
           <div className="grid grid-rows-1 md:grid-rows-2 lg:grid-rows-1 gap-6">
             <div className="text-center w-full max-h-sm ">
               <h2 className="text-lg text-center mb-2 uppercase text-black">
-                {queueType === "confissoes" ? "Confissão" : "Direção Espiritual"}
+                {queueType === "confissoes"
+                  ? "Confissão"
+                  : "Direção Espiritual"}
               </h2>
               <div className="flex flex-col justify-center items-center bg-gray-50 rounded-lg p-5 flex-1 min-w-[220px]">
                 <span className="text-xl font-semibold text-gray-800 mb-2">
@@ -251,7 +320,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
                 </span>
 
                 {userPosition === null ? (
-                   <LoadingSpinner size="sm" color="white" className="my-2"/>
+                  <LoadingSpinner size="sm" color="white" className="my-2" />
                 ) : userPosition === 1 ? (
                   <span className="text-lg text-blue-700 mt-2 font-semibold">
                     Você é o próximo, aguarde ser chamado!
@@ -265,7 +334,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
                     .
                   </span>
                 )}
-                
+
                 {totalInQueue !== null && totalInQueue > 1 && (
                   <span className="text-lg text-gray-700">
                     Total na fila{" "}
@@ -290,7 +359,7 @@ export default function WaitingPage({ params }: { params: { type: string } }) {
             </div>
           </div>
         </div>
-        
+
         <div className="text-center">
           <BackButton
             href="/select-queue"

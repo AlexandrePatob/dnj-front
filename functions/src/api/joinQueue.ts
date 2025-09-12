@@ -25,23 +25,34 @@ export const joinQueue = onCall({ region: "southamerica-east1" }, async (request
   logger.info(`Tentativa de entrada: ${user.name} na fila ${queueType}`);
 
   try {
-    // === VALIDAÇÃO 1: Verificar se já foi chamado e está aguardando ===
+    // === VALIDAÇÃO 1: Verificar se já foi chamado (qualquer status) ===
     const currentlyCalledQuery = db
       .collection(COLLECTIONS.CALLED_PEOPLE)
       .where("phone", "==", user.phone)
-      .where("queueType", "==", queueType)
-      .where("status", "==", "waiting");
+      .where("queueType", "==", queueType);
 
     const currentlyCalledSnapshot = await currentlyCalledQuery.get();
     if (!currentlyCalledSnapshot.empty) {
       const calledDoc = currentlyCalledSnapshot.docs[0];
-      logger.info(`${user.name} já foi chamado e está aguardando confirmação.`);
-      return {
-        status: "called",
-        message: "Você já foi chamado! Dirija-se ao local de atendimento.",
-        docId: calledDoc.id,
-        calledAt: calledDoc.data().calledAt
-      };
+      const calledData = calledDoc.data();
+      
+      // Se está aguardando confirmação, retorna que foi chamado
+      if (calledData.status === "waiting") {
+        logger.info(`${user.name} já foi chamado e está aguardando confirmação.`);
+        return {
+          status: "called",
+          message: "Você já foi chamado! Dirija-se ao local de atendimento.",
+          docId: calledDoc.id,
+          calledAt: calledData.calledAt
+        };
+      }
+      
+      // Se já foi confirmado ou completado, bloqueia entrada
+      logger.warn(`Entrada bloqueada para ${user.name}: já foi chamado e ${calledData.status}.`);
+      throw new HttpsError(
+        "failed-precondition",
+        "Você já foi chamado nesta fila. Não é possível entrar novamente."
+      );
     }
 
     // === VALIDAÇÃO 2: Trava de 15 minutos (sem alteração) ===
