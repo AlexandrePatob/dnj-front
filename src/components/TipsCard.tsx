@@ -81,6 +81,86 @@ export function TipsCard({ queueType, className = "" }: TipsCardProps) {
                 </ul>
               </div>
 
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <p className="font-semibold text-gray-800 mb-3 text-center">
+                  Exame pelos 10 Mandamentos
+                </p>
+                
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">1º Mandamento - Amar a Deus sobre todas as coisas</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Duvidei da existência de Deus?</li>
+                      <li>Esperei alcançar o céu sem largar o pecado?</li>
+                      <li>Recebi indignamente algum sacramento?</li>
+                      <li>Acreditei em Horóscopo?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">2º Mandamento - Não invocar o Santo nome de Deus em vão</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Falei mal da Igreja?</li>
+                      <li>Roguei praga a alguém?</li>
+                      <li>Deixei de cumprir algum voto ou promessa que fiz a Deus ou algum Santo?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">3º Mandamento - Guardar Domingos e Festas</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Faltei à missa aos domingos ou algum dia Santo?</li>
+                      <li>Cheguei tarde na missa por conta própria?</li>
+                      <li>Trabalhei ou mandei trabalhar nesses dias?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">4º Mandamento - Honrar Pai e Mãe</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Obedeci e respeitei meus pais enquanto estive em sua tutela?</li>
+                      <li>Entristeci-os com as minhas palavras, atitudes e comportamentos?</li>
+                      <li>Tenho rezado por eles?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">5º Mandamento - Não Matar</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Causei algum prejuízo ao próximo com palavras ou obras?</li>
+                      <li>Alimentei pensamento de vingança?</li>
+                      <li>Cheguei a ferir ou tirar a vida do próximo?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">6º e 9º Mandamentos - Não pecar contra a Castidade</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Consenti em pensamentos e desejos contra a Castidade?</li>
+                      <li>Tiver liberdades no namoro?</li>
+                      <li>Permiti situações que me colocaram numa situação próxima de pecado?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">7º e 10º Mandamentos - Não Furtar / Não cobiçar as coisas alheias</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Roubei algum objeto ou alguma quantia em dinheiro?</li>
+                      <li>Tive inveja dos outros?</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-1">8º Mandamento - Não levantar falso testemunho</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                      <li>Disse Mentiras?</li>
+                      <li>Falei mal de outras pessoas apenas escutando o que ouço por aí?</li>
+                      <li>Gostei de escutar fofocas de outras pessoas?</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-blue-50 border-l-4 border-blue-400 p-3 text-sm text-blue-800">
                 💡 Dica: Seja honesto. Confissão não é sobre se culpar, é sobre
                 se libertar!
