@@ -19,6 +19,7 @@ export interface QueueItem {
   position: number;
   queueType: 'confissoes' | 'direcao-espiritual';
   createdAt: string;
+  almostThereNotificationSent?: boolean; // Campo para controlar notificações duplicadas
 }
 
 export interface CalledPerson {
