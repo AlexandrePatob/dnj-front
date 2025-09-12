@@ -25,7 +25,26 @@ export const joinQueue = onCall({ region: "southamerica-east1" }, async (request
   logger.info(`Tentativa de entrada: ${user.name} na fila ${queueType}`);
 
   try {
-    // === VALIDAÇÃO 1: Trava de 15 minutos (sem alteração) ===
+    // === VALIDAÇÃO 1: Verificar se já foi chamado e está aguardando ===
+    const currentlyCalledQuery = db
+      .collection(COLLECTIONS.CALLED_PEOPLE)
+      .where("phone", "==", user.phone)
+      .where("queueType", "==", queueType)
+      .where("status", "==", "waiting");
+
+    const currentlyCalledSnapshot = await currentlyCalledQuery.get();
+    if (!currentlyCalledSnapshot.empty) {
+      const calledDoc = currentlyCalledSnapshot.docs[0];
+      logger.info(`${user.name} já foi chamado e está aguardando confirmação.`);
+      return {
+        status: "called",
+        message: "Você já foi chamado! Dirija-se ao local de atendimento.",
+        docId: calledDoc.id,
+        calledAt: calledDoc.data().calledAt
+      };
+    }
+
+    // === VALIDAÇÃO 2: Trava de 15 minutos (sem alteração) ===
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     const recentCallQuery = db
       .collection(COLLECTIONS.CALLED_PEOPLE)
@@ -42,7 +61,7 @@ export const joinQueue = onCall({ region: "southamerica-east1" }, async (request
       );
     }
 
-    // === VALIDAÇÃO 2: Fila única & Recuperação de Sessão (LÓGICA CORRIGIDA) ===
+    // === VALIDAÇÃO 3: Fila única & Recuperação de Sessão (LÓGICA CORRIGIDA) ===
     const alreadyInQueueQuery = db.collection(COLLECTIONS.QUEUE)
         .where("phone", "==", user.phone);
 

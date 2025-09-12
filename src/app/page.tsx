@@ -1,17 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Phone, ArrowRight } from "lucide-react";
+import { User, Phone, ArrowRight, XCircle } from "lucide-react";
 import { User as UserType } from "@/lib/types";
-import { Header } from "@/components";
+import { Header, LoadingSpinner } from "@/components";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+
+interface QueueConfig {
+  isQueueOpen: boolean;
+}
 
 export default function Home() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [nameError, setNameError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [config, setConfig] = useState<QueueConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    const configRef = doc(db, 'config', 'default');
+    
+    const unsubscribe = onSnapshot(configRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setConfig({ isQueueOpen: data.isQueueOpen !== undefined ? data.isQueueOpen : true });
+      } else {
+        // Se o documento não existir, assume que a fila está aberta
+        setConfig({ isQueueOpen: true });
+      }
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Erro ao ouvir configuração da fila:', error);
+      // Em caso de erro, assume que a fila está aberta para não bloquear usuários
+      setConfig({ isQueueOpen: true });
+      setIsLoading(false);
+    });
+
+    // Limpa o listener quando o componente é desmontado
+    return () => unsubscribe();
+  }, []);
 
   // Aplicar máscara de telefone
   const formatPhone = (value: string) => {
@@ -104,6 +135,37 @@ export default function Home() {
       !phoneError
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#181818] text-white flex flex-col items-center justify-center p-4">
+        <Header showLogo={true} />
+        <div className="flex flex-col items-center justify-center text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!config?.isQueueOpen) {
+    return (
+      <div className="min-h-screen bg-[#181818] text-white flex flex-col items-center justify-center p-4">
+        <Header showLogo={true} />
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+            <XCircle className="mx-auto h-16 w-16 text-red-500" />
+            <h2 className="mt-6 text-2xl font-bold text-gray-800">
+              Atendimento Finalizado
+            </h2>
+            <p className="mt-2 text-gray-600">
+              O atendimento por esta fila foi encerrado por hoje. Agradecemos a sua participação!
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#181818] text-white p-4">

@@ -6,13 +6,15 @@ interface QueueConfig {
   almostTherePosition: number;
   whatsAppEnabled: boolean;
   notificationDelay: number; // em segundos
+  isQueueOpen?: boolean;
 }
 
 // Configuração padrão
 const DEFAULT_CONFIG: QueueConfig = {
   almostTherePosition: 5,
   whatsAppEnabled: true,
-  notificationDelay: 10
+  notificationDelay: 10,
+  isQueueOpen: true,
 };
 
 // Referência para o documento de configuração no Firebase
@@ -28,7 +30,8 @@ async function getConfigFromFirebase(): Promise<QueueConfig> {
       return {
         almostTherePosition: data.almostTherePosition || DEFAULT_CONFIG.almostTherePosition,
         whatsAppEnabled: data.whatsAppEnabled !== undefined ? data.whatsAppEnabled : DEFAULT_CONFIG.whatsAppEnabled,
-        notificationDelay: data.notificationDelay || DEFAULT_CONFIG.notificationDelay
+        notificationDelay: data.notificationDelay || DEFAULT_CONFIG.notificationDelay,
+        isQueueOpen: data.isQueueOpen !== undefined ? data.isQueueOpen : DEFAULT_CONFIG.isQueueOpen,
       };
     } else {
       // Se não existir, criar com configuração padrão
@@ -57,7 +60,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { almostTherePosition, whatsAppEnabled, notificationDelay } = body;
+    const { almostTherePosition, whatsAppEnabled, notificationDelay, isQueueOpen } = body;
 
     // Validações
     if (almostTherePosition !== undefined && (almostTherePosition < 1 || almostTherePosition > 20)) {
@@ -82,6 +85,7 @@ export async function PUT(request: NextRequest) {
     if (almostTherePosition !== undefined) updateData.almostTherePosition = almostTherePosition;
     if (whatsAppEnabled !== undefined) updateData.whatsAppEnabled = whatsAppEnabled;
     if (notificationDelay !== undefined) updateData.notificationDelay = notificationDelay;
+    if (isQueueOpen !== undefined) updateData.isQueueOpen = isQueueOpen;
 
     // Atualizar no Firebase
     await updateDoc(CONFIG_DOC_REF, updateData);

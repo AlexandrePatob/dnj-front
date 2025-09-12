@@ -42,7 +42,7 @@ export function useFirebaseQueue() {
       setIsLoading(true);
       setError(null);
       const result = await joinQueueCallable({ user, queueType });
-      return result.data as { status: string; message: string; docId: string };
+      return result.data as { status: string; message: string; docId: string; calledAt?: any };
     } catch (err: any) {
       console.error("Erro ao chamar joinQueue:", err);
       setError(err.message || "Erro ao entrar na fila.");
@@ -176,14 +176,14 @@ export function useFirebaseQueue() {
       collection(db, "queue"),
       where("queueType", "==", "confissoes"),
       orderBy("createdAt", "asc"),
-      limit(100) // Aumentado para 100 para maior visibilidade do admin
+      limit(10)
     );
     // Listener para os 5 primeiros da fila de direção espiritual
     const direcaoQuery = query(
       collection(db, "queue"),
       where("queueType", "==", "direcao-espiritual"),
       orderBy("createdAt", "asc"),
-      limit(100) // Aumentado para 100 para maior visibilidade do admin
+      limit(10)
     );
 
     const unsubscribeConfissoes = onSnapshot(

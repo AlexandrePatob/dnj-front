@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Users } from "lucide-react";
+import { Heart, Users, XCircle } from "lucide-react";
 import { User } from "@/lib/types";
 import { Header, LoadingSpinner, BackButton } from "@/components";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+
+interface QueueConfig {
+  isQueueOpen: boolean;
+}
 
 export default function SelectQueue() {
   const [user, setUser] = useState<User | null>(null);
+  const [config, setConfig] = useState<QueueConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -16,15 +24,53 @@ export default function SelectQueue() {
       setUser(JSON.parse(userData));
     } else {
       router.push("/");
+      return;
     }
+
+    const configRef = doc(db, 'config', 'default');
+    const unsubscribe = onSnapshot(configRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setConfig({ isQueueOpen: data.isQueueOpen !== undefined ? data.isQueueOpen : true });
+      } else {
+        setConfig({ isQueueOpen: true });
+      }
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Erro ao ouvir configuração da fila:', error);
+      setConfig({ isQueueOpen: true });
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [router]);
 
-  if (!user) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#181818]">
         <div className="text-center text-white">
           <LoadingSpinner size="lg" color="white" className="mx-auto mb-4" />
           <p className="text-white">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!config?.isQueueOpen) {
+    return (
+      <div className="min-h-screen bg-[#181818] text-white flex flex-col items-center justify-center p-4">
+        <Header showLogo={true} />
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+            <XCircle className="mx-auto h-16 w-16 text-red-500" />
+            <h2 className="mt-6 text-2xl font-bold text-gray-800">
+              Atendimento Finalizado
+            </h2>
+            <p className="mt-2 text-gray-600">
+              O atendimento por esta fila foi encerrado por hoje. Agradecemos a sua participação!
+            </p>
+            <BackButton href="/" text="Voltar ao Início" className="mt-6" />
+          </div>
         </div>
       </div>
     );

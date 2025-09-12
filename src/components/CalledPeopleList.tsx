@@ -12,6 +12,8 @@ import {
   UserX,
   Heart,
   Users,
+  Bell,
+  Loader2,
 } from "lucide-react";
 
 interface CalledPeopleListProps {
@@ -21,6 +23,9 @@ interface CalledPeopleListProps {
   onRemove: (id: string) => void;
   queueType?: QueueType; // Opcional para filtrar por tipo
   title?: string; // Título personalizado
+  onCallNext?: () => void; // Função para chamar próximo
+  isLoading?: boolean; // Loading individual para cada fila
+  queueLength?: number; // Quantidade de pessoas na fila
 }
 
 export function CalledPeopleList({
@@ -30,89 +35,76 @@ export function CalledPeopleList({
   onRemove,
   queueType,
   title,
+  onCallNext,
+  isLoading = false,
+  queueLength = 0,
 }: CalledPeopleListProps) {
-  const [timeLeft, setTimeLeft] = useState<Record<string, number>>({});
+  // Remover estado centralizado de timer
 
   // Filtrar pessoas por tipo de fila e por tempo
-  const filteredCalledPeople = (queueType
-    ? calledPeople.filter((person) => person.queueType === queueType)
-    : calledPeople
+  const filteredCalledPeople = (
+    queueType
+      ? calledPeople.filter((person) => person.queueType === queueType)
+      : calledPeople
   ).filter((person) => {
     // Sempre mostrar pessoas aguardando
-    if (person.status === 'waiting') return true;
-    
+    if (person.status === "waiting") return true;
+
     // Para confirmed e no-show, só mostrar se foi atualizado recentemente (1 minuto)
-    if (person.status === 'confirmed' || person.status === 'no-show') {
+    if (person.status === "confirmed" || person.status === "no-show") {
       const now = Date.now();
       const updatedAt = person.updatedAt || person.calledAt; // Usar updatedAt ou calledAt como fallback
-      const oneMinuteAgo = now - (60 * 1000); // 1 minuto em ms
-      
+      const oneMinuteAgo = now - 60 * 1000; // 1 minuto em ms
+
       return updatedAt > oneMinuteAgo;
     }
-    
+
     return false;
   });
 
   // Filtrar pessoas por tipo específico para as tabs
-  const confissoesCalledPeople = calledPeople.filter((person) => 
-    person.queueType === "confissoes"
-  ).filter((person) => {
-    if (person.status === 'waiting') return true;
-    if (person.status === 'confirmed' || person.status === 'no-show') {
-      const now = Date.now();
-      const updatedAt = person.updatedAt || person.calledAt;
-      const oneMinuteAgo = now - (60 * 1000);
-      return updatedAt > oneMinuteAgo;
-    }
-    return false;
-  });
+  const confissoesCalledPeople = calledPeople
+    .filter((person) => person.queueType === "confissoes")
+    .filter((person) => {
+      if (person.status === "waiting") return true;
+      if (person.status === "confirmed" || person.status === "no-show") {
+        const now = Date.now();
+        const updatedAt = person.updatedAt || person.calledAt;
+        const oneMinuteAgo = now - 60 * 1000;
+        return updatedAt > oneMinuteAgo;
+      }
+      return false;
+    });
 
-  const direcaoEspiritualCalledPeople = calledPeople.filter((person) => 
-    person.queueType === "direcao-espiritual"
-  ).filter((person) => {
-    if (person.status === 'waiting') return true;
-    if (person.status === 'confirmed' || person.status === 'no-show') {
-      const now = Date.now();
-      const updatedAt = person.updatedAt || person.calledAt;
-      const oneMinuteAgo = now - (60 * 1000);
-      return updatedAt > oneMinuteAgo;
-    }
-    return false;
-  });
+  const direcaoEspiritualCalledPeople = calledPeople
+    .filter((person) => person.queueType === "direcao-espiritual")
+    .filter((person) => {
+      if (person.status === "waiting") return true;
+      if (person.status === "confirmed" || person.status === "no-show") {
+        const now = Date.now();
+        const updatedAt = person.updatedAt || person.calledAt;
+        const oneMinuteAgo = now - 60 * 1000;
+        return updatedAt > oneMinuteAgo;
+      }
+      return false;
+    });
 
   // Verificar se há pessoas que estão em ambas as filas (para mostrar alerta)
   const checkDuplicatePersons = (people: CalledPerson[]) => {
     const personMap = new Map<string, CalledPerson[]>();
-    
-    people.forEach(person => {
+
+    people.forEach((person) => {
       const key = `${person.name}_${person.phone}`;
       if (!personMap.has(key)) {
         personMap.set(key, []);
       }
       personMap.get(key)!.push(person);
     });
-    
+
     return personMap;
   };
 
-  // Atualizar timer a cada segundo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const newTimeLeft: Record<string, number> = {};
-
-      calledPeople.forEach((person) => {
-        if (person.status === "waiting") {
-          const remaining = Math.max(0, person.expiresAt - now);
-          newTimeLeft[person.id] = remaining;
-        }
-      });
-
-      setTimeLeft(newTimeLeft);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [calledPeople]);
+  // Remover lógica de timer centralizado - cada pessoa gerencia o seu
 
   const formatTime = (milliseconds: number) => {
     const minutes = Math.floor(milliseconds / 60000);
@@ -161,10 +153,6 @@ export function CalledPeopleList({
 
   // Definir título e ícone baseado no tipo
   const getQueueTitle = () => {
-    if (title) return title;
-    if (queueType === "confissoes") return "Confissões - Chamados";
-    if (queueType === "direcao-espiritual")
-      return "Direção Espiritual - Chamados";
     return "Chamados";
   };
 
@@ -176,8 +164,28 @@ export function CalledPeopleList({
     return null;
   };
 
-  // Componente para renderizar uma pessoa chamada
+  // Componente para renderizar uma pessoa chamada - COM TIMER PRÓPRIO
   const CalledPersonItem = ({ person }: { person: CalledPerson }) => {
+    const [timeLeft, setTimeLeft] = useState<number>(0);
+    // Timer individual para cada pessoa
+    useEffect(() => {
+      if (person.status !== "waiting") return;
+
+      const updateTimer = () => {
+        const now = Date.now();
+        const remaining = Math.max(0, person.expiresAt - now);
+        setTimeLeft(remaining);
+      };
+
+      // Atualizar imediatamente
+      updateTimer();
+
+      // Atualizar a cada segundo
+      const interval = setInterval(updateTimer, 1000);
+
+      return () => clearInterval(interval);
+    }, [person.id, person.status, person.expiresAt]);
+
     return (
       <div
         key={person.id}
@@ -203,9 +211,10 @@ export function CalledPeopleList({
                     : "Direção Espiritual"}
                 </span>
                 <span className="text-gray-400">
-                  Chamado às {new Date(person.calledAt).toLocaleTimeString('pt-BR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                  Chamado às{" "}
+                  {new Date(person.calledAt).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
                   })}
                 </span>
               </div>
@@ -215,16 +224,20 @@ export function CalledPeopleList({
               <Badge className={getStatusColor(person.status)}>
                 <div className="flex items-center gap-1">
                   {getStatusIcon(person.status)}
-                  <span className="text-xs">{getStatusText(person.status)}</span>
+                  <span className="text-xs">
+                    {getStatusText(person.status)}
+                  </span>
                 </div>
               </Badge>
 
-              {person.status === "waiting" &&
-                timeLeft[person.id] !== undefined && (
-                  <Badge variant="outline" className="font-mono text-xs text-black">
-                    {formatTime(timeLeft[person.id])}
-                  </Badge>
-                )}
+              {person.status === "waiting" && timeLeft > 0 && (
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs text-black"
+                >
+                  {formatTime(timeLeft)}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -250,38 +263,40 @@ export function CalledPeopleList({
               </Button>
             </div>
           )}
-
-          {/* Status de confirmação */}
-          {person.status === "confirmed" && (
-            <div className="text-center py-2">
-              <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                ✅ Confirmado! Sumindo em instantes...
-              </span>
-            </div>
-          )}
-
-          {/* Status de no-show */}
-          {person.status === "no-show" && (
-            <div className="text-center py-2">
-              <span className="text-sm font-medium text-red-600 bg-red-100 px-3 py-1 rounded-full">
-                ❌ Não compareceu! Sumindo em instantes...
-              </span>
-            </div>
-          )}
         </div>
       </div>
     );
   };
 
-  // Se não há pessoas chamadas, mostrar mensagem vazia
+  // Se não há pessoas chamadas, mostrar mensagem vazia COM BOTÃO
   if (calledPeople.length === 0) {
     return (
       <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
-            {getQueueIcon()}
-            {getQueueTitle()}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-md text-black flex items-center gap-2">
+              {getQueueTitle()}
+              <Badge variant="secondary" className="ml-2">
+                {queueLength}
+              </Badge>
+            </CardTitle>
+            {onCallNext && (
+              <Button
+                onClick={onCallNext}
+                disabled={queueLength === 0 || isLoading}
+                className={`${
+                  queueType === "confissoes"
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } text-white`}
+                size="sm"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Chamar Próximo
+                {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <p className="text-center text-muted-foreground py-8 text-black">
@@ -298,10 +313,30 @@ export function CalledPeopleList({
       return (
         <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
-              {getQueueIcon()}
+            <div className="flex items-center justify-between">
+            <CardTitle className="text-md text-black flex items-center gap-2">
               {getQueueTitle()}
+              <Badge variant="secondary" className="ml-2">
+                {queueLength}
+              </Badge>
             </CardTitle>
+              {onCallNext && (
+                <Button
+                  onClick={onCallNext}
+                  disabled={queueLength === 0 || isLoading}
+                  className={`${
+                    queueType === "confissoes"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-green-600 hover:bg-green-700"
+                  } text-white`}
+                  size="sm"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Chamar Próximo
+                  {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-center text-muted-foreground py-8 text-black">
@@ -315,13 +350,30 @@ export function CalledPeopleList({
     return (
       <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-xl text-gray-600 flex items-center gap-2">
-            {getQueueIcon()}
-            {getQueueTitle()}
-            <Badge variant="secondary" className="ml-2">
-              {filteredCalledPeople.length}
-            </Badge>
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-md text-black flex items-center gap-2">
+              {getQueueTitle()}
+              <Badge variant="secondary" className="ml-2">
+                {filteredCalledPeople.length}
+              </Badge>
+            </CardTitle>
+            {onCallNext && (
+              <Button
+                onClick={onCallNext}
+                disabled={queueLength === 0 || isLoading}
+                className={`${
+                  queueType === "confissoes"
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } text-white`}
+                size="sm"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Chamar Próximo
+                {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
@@ -345,8 +397,8 @@ export function CalledPeopleList({
           >
             <Heart className="w-4 h-4" />
             <span>Confissões</span>
-            <Badge 
-              variant="secondary" 
+            <Badge
+              variant="secondary"
               className="ml-1 data-[state=active]:bg-white data-[state=active]:text-christblue"
             >
               {confissoesCalledPeople.length}
@@ -358,8 +410,8 @@ export function CalledPeopleList({
           >
             <Users className="w-4 h-4" />
             <span>Direção Espiritual</span>
-            <Badge 
-              variant="secondary" 
+            <Badge
+              variant="secondary"
               className="ml-1 data-[state=active]:bg-white data-[state=active]:text-white data-[state=active]:text-christgreen"
             >
               {direcaoEspiritualCalledPeople.length}
@@ -370,13 +422,27 @@ export function CalledPeopleList({
         <TabsContent value="confissoes" className="mt-6">
           <Card className="border-2 border-christblue-light bg-white backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl text-christblue-dark flex items-center gap-2">
-                <Heart className="w-6 h-6 text-christblue" />
-                Confissões - Chamados
-                <Badge variant="secondary" className="ml-2">
-                  {confissoesCalledPeople.length}
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-christblue-dark flex items-center gap-2">
+                  <Heart className="w-6 h-6 text-christblue" />
+                  Confissões - Chamados
+                  <Badge variant="secondary" className="ml-2">
+                    {confissoesCalledPeople.length}
+                  </Badge>
+                </CardTitle>
+                {onCallNext && (
+                  <Button
+                    onClick={onCallNext}
+                    disabled={queueLength === 0 || isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Chamar Próximo
+                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {confissoesCalledPeople.length > 0 ? (
@@ -397,13 +463,27 @@ export function CalledPeopleList({
         <TabsContent value="direcao-espiritual" className="mt-6">
           <Card className="border-2 border-christgreen-light bg-white backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-xl text-christgreen-dark flex items-center gap-2">
-                <Users className="w-6 h-6 text-christgreen" />
-                Direção Espiritual - Chamados
-                <Badge variant="secondary" className="ml-2">
-                  {direcaoEspiritualCalledPeople.length}
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl text-christgreen-dark flex items-center gap-2">
+                  <Users className="w-6 h-6 text-christgreen" />
+                  Direção Espiritual - Chamados
+                  <Badge variant="secondary" className="ml-2">
+                    {direcaoEspiritualCalledPeople.length}
+                  </Badge>
+                </CardTitle>
+                {onCallNext && (
+                  <Button
+                    onClick={onCallNext}
+                    disabled={queueLength === 0 || isLoading}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Chamar Próximo
+                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {direcaoEspiritualCalledPeople.length > 0 ? (
