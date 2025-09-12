@@ -2,7 +2,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import { QueueType } from "../types";
-//import fetch from "node-fetch";
+import fetch from "node-fetch";
 
 const db = getFirestore();
 const COLLECTIONS = {
