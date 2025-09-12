@@ -54,7 +54,7 @@ export function useFirebaseCalledPeople() {
             phone: data.phone,
             queueType: data.queueType,
             calledAt: data.calledAt?.toDate?.()?.getTime(),
-            expiresAt: data.expiresAt,
+            expiresAt: data.expiresAt?.toDate?.()?.getTime(),
             status: data.status || "waiting",
             updatedAt:
               data.updatedAt?.toDate?.()?.getTime() ||

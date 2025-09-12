@@ -26,6 +26,7 @@ interface CalledPeopleListProps {
   onCallNext?: () => void; // Função para chamar próximo
   isLoading?: boolean; // Loading individual para cada fila
   queueLength?: number; // Quantidade de pessoas na fila
+  queueLengthCalled?: number; // Quantidade de pessoas na fila chamadas
 }
 
 export function CalledPeopleList({
@@ -38,6 +39,7 @@ export function CalledPeopleList({
   onCallNext,
   isLoading = false,
   queueLength = 0,
+  queueLengthCalled = 0,
 }: CalledPeopleListProps) {
   // Remover estado centralizado de timer
 
@@ -52,8 +54,9 @@ export function CalledPeopleList({
 
     // Para confirmed e no-show, só mostrar se foi atualizado recentemente (1 minuto)
     if (person.status === "confirmed" || person.status === "no-show") {
+      if(!person.updatedAt) return false;
       const now = Date.now();
-      const updatedAt = person.updatedAt || person.calledAt; // Usar updatedAt ou calledAt como fallback
+      const updatedAt = person.updatedAt
       const oneMinuteAgo = now - 60 * 1000; // 1 minuto em ms
 
       return updatedAt > oneMinuteAgo;
@@ -68,6 +71,7 @@ export function CalledPeopleList({
     .filter((person) => {
       if (person.status === "waiting") return true;
       if (person.status === "confirmed" || person.status === "no-show") {
+        if(!person.updatedAt) return false;
         const now = Date.now();
         const updatedAt = person.updatedAt || person.calledAt;
         const oneMinuteAgo = now - 60 * 1000;
@@ -277,7 +281,7 @@ export function CalledPeopleList({
             <CardTitle className="text-md text-black flex items-center gap-2">
               {getQueueTitle()}
               <Badge variant="secondary" className="ml-2">
-                {queueLength}
+                {queueLengthCalled}
               </Badge>
             </CardTitle>
             {onCallNext && (
@@ -314,12 +318,12 @@ export function CalledPeopleList({
         <Card className="border-2 border-gray-200 bg-white backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
-            <CardTitle className="text-md text-black flex items-center gap-2">
-              {getQueueTitle()}
-              <Badge variant="secondary" className="ml-2">
-                {queueLength}
-              </Badge>
-            </CardTitle>
+              <CardTitle className="text-md text-black flex items-center gap-2">
+                {getQueueTitle()}
+                <Badge variant="secondary" className="ml-2">
+                  {queueLengthCalled}
+                </Badge>
+              </CardTitle>
               {onCallNext && (
                 <Button
                   onClick={onCallNext}
@@ -333,7 +337,9 @@ export function CalledPeopleList({
                 >
                   <Bell className="w-4 h-4 mr-2" />
                   Chamar Próximo
-                  {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  )}
                 </Button>
               )}
             </div>
@@ -439,7 +445,9 @@ export function CalledPeopleList({
                   >
                     <Bell className="w-4 h-4 mr-2" />
                     Chamar Próximo
-                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    )}
                   </Button>
                 )}
               </div>
@@ -480,7 +488,9 @@ export function CalledPeopleList({
                   >
                     <Bell className="w-4 h-4 mr-2" />
                     Chamar Próximo
-                    {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                    {isLoading && (
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    )}
                   </Button>
                 )}
               </div>

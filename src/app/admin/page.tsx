@@ -97,6 +97,8 @@ export default function AdminPage() {
   // Filtra a lista limitada (top 5 de cada) para exibição
   const confissoesQueue = queue.filter((item) => item.queueType === "confissoes");
   const direcaoEspiritualQueue = queue.filter((item) => item.queueType === "direcao-espiritual");
+  const confissoesQueueCalled = calledPeople.filter((item) => item.queueType === "confissoes");
+  const direcaoEspiritualQueueCalled = calledPeople.filter((item) => item.queueType === "direcao-espiritual");
 
   // Calcula o total por fila com base no total global e na contagem de uma das filas
   // NOTA: Isso é uma aproximação. O ideal seria o hook retornar totais separados.
@@ -306,6 +308,7 @@ export default function AdminPage() {
               onCallNext={() => handleCallNext("confissoes")}
               isLoading={isLoading}
               queueLength={confissoesQueue.length}
+              queueLengthCalled={confissoesQueueCalled.length}
             />
             <CalledPeopleList
               calledPeople={calledPeople}
@@ -316,6 +319,7 @@ export default function AdminPage() {
               onCallNext={() => handleCallNext("direcao-espiritual")}
               isLoading={isLoading}
               queueLength={direcaoEspiritualQueue.length}
+              queueLengthCalled={direcaoEspiritualQueueCalled.length}
             />
           </div>
 
