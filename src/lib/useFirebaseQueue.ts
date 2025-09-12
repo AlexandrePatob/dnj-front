@@ -7,6 +7,8 @@ import {
   orderBy,
   limit,
   getCountFromServer,
+  doc,
+  runTransaction,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app, db } from "./firebase";
@@ -42,7 +44,12 @@ export function useFirebaseQueue() {
       setIsLoading(true);
       setError(null);
       const result = await joinQueueCallable({ user, queueType });
-      return result.data as { status: string; message: string; docId: string; calledAt?: any };
+      return result.data as {
+        status: string;
+        message: string;
+        docId: string;
+        calledAt?: any;
+      };
     } catch (err: any) {
       console.error("Erro ao chamar joinQueue:", err);
       setError(err.message || "Erro ao entrar na fila.");
@@ -136,6 +143,48 @@ export function useFirebaseQueue() {
       }
     };
 
+    // Função atômica para enviar notificação (resolve race conditions)
+    const sendAlmostThereNotificationAtomically = async (
+      person: QueueItem,
+      position: number
+    ) => {
+      try {
+        const result = await runTransaction(db, async (transaction) => {
+          const docRef = doc(db, "queue", person.id);
+          const docSnap = await transaction.get(docRef);
+
+          // Se não existe o documento ou já foi enviado, retorna null
+          if (
+            !docSnap.exists() ||
+            docSnap.data()?.almostThereNotificationSent
+          ) {
+            return null;
+          }
+
+          // Marca como enviado ANTES de enviar (evita race conditions)
+          transaction.update(docRef, { almostThereNotificationSent: true });
+          return person;
+        });
+
+        // Se a transação retornou a pessoa, significa que conseguimos marcar
+        if (result) {
+          await sendAlmostThereNotification(person, position);
+          console.log(
+            `✅ Notificação 'almost-there' enviada atomicamente para ${person.name}`
+          );
+          return true;
+        } else {
+          console.log(
+            `⏭️ Notificação 'almost-there' já foi enviada para ${person.name} por outro admin`
+          );
+          return false;
+        }
+      } catch (error) {
+        console.error("Erro na transação de notificação:", error);
+        return false;
+      }
+    };
+
     // Função que processa as atualizações da fila e dispara notificações
     const processQueueUpdate = async (
       newQueueData: QueueItem[],
@@ -156,7 +205,11 @@ export function useFirebaseQueue() {
             previousQueue.indexOf(p) === almostTherePosition - 1
         );
         if (!wasAlreadyThere) {
-          sendAlmostThereNotification(targetPerson, almostTherePosition);
+          // Usar função atômica que resolve race conditions entre múltiplos admins
+          await sendAlmostThereNotificationAtomically(
+            targetPerson,
+            almostTherePosition
+          );
         }
       }
 
