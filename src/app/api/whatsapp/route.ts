@@ -6,6 +6,7 @@ interface WhatsAppRequest {
   queueType: "confissoes" | "direcao-espiritual";
   position?: number;
   type: "turn" | "almost-there" | "welcome";
+  version?: string; // Versão do frontend
 }
 
 async function sendWhatsAppNotification(
@@ -64,7 +65,36 @@ async function sendWhatsAppNotification(
 export async function POST(request: NextRequest) {
   try {
     const body: WhatsAppRequest = await request.json();
-    const { name, phone, queueType, type, position } = body;
+    const { name, phone, queueType, type, position, version } = body;
+    
+    // Obter IP do cliente
+    const clientIP = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    // Versão mínima requerida (atualize conforme necessário)
+    const MINIMUM_VERSION = "1.0.0";
+    
+    // Log da tentativa de envio
+    console.log(`🔍 WhatsApp Request - IP: ${clientIP}, Version: ${version || 'unknown'}, Type: ${type}, Name: ${name}`);
+    
+    // Verificar versão para notificações "almost-there"
+    if (type === "almost-there") {
+      const clientVersion = version || "0.0.0"; // Versão ausente = muito antiga
+      if (clientVersion < MINIMUM_VERSION) {
+        console.warn(`❌ BLOCKED - Versão antiga detectada! IP: ${clientIP}, Version: ${version}, Required: ${MINIMUM_VERSION}`);
+        return NextResponse.json(
+          { 
+            error: `Versão do sistema desatualizada. Versão atual: ${version || 'desconhecida'}, Versão mínima: ${MINIMUM_VERSION}. Atualize a página.`,
+            blocked: true,
+            currentVersion: version,
+            minimumVersion: MINIMUM_VERSION
+          },
+          { status: 426 } // 426 = Upgrade Required
+        );
+      }
+      console.log(`✅ VERSION OK - IP: ${clientIP}, Version: ${version}`);
+    }
 
     // Validação dos campos obrigatórios
     if (!name || !phone || !queueType || !type) {
