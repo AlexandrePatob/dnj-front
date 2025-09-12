@@ -127,7 +127,7 @@ export function useFirebaseQueue() {
         `Disparando notificação 'almost-there' para ${person.name} na posição ${position}`
       );
       try {
-        await fetch("https://fila.dnjcuritiba.com.br/api/whatsapp", {
+        const response = await fetch(`https://fila.dnjcuritiba.com.br/api/whatsapp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -136,8 +136,16 @@ export function useFirebaseQueue() {
             queueType: person.queueType,
             type: "almost-there",
             position: position,
+            version: "1.0.0", // Versão atual do sistema
           }),
         });
+        
+        if (response.ok) {
+          console.log(`✅ Notificação enviada com sucesso para ${person.name}`);
+        } else {
+          const errorData = await response.json();
+          console.log(`❌ Erro na API:`, errorData);
+        }
       } catch (e) {
         console.error("Erro ao enviar notificação 'almost-there':", e);
       }
@@ -205,11 +213,14 @@ export function useFirebaseQueue() {
             previousQueue.indexOf(p) === almostTherePosition - 1
         );
         if (!wasAlreadyThere) {
-          // Usar função atômica que resolve race conditions entre múltiplos admins
-          await sendAlmostThereNotificationAtomically(
-            targetPerson,
-            almostTherePosition
-          );
+          // Aguarda 5 segundos antes de enviar a notificação
+          setTimeout(async () => {
+            // Usar função atômica que resolve race conditions entre múltiplos admins
+            await sendAlmostThereNotificationAtomically(
+              targetPerson,
+              almostTherePosition
+            );
+          }, 5000);
         }
       }
 
